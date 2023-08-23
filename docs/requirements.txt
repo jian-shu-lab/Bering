@@ -7,5 +7,5 @@ scipy
 scikit-learn
 igraph
 leidenalg
-torch
+torch==1.12.1+cu116
 torch_geometric==2.1.0.post1
