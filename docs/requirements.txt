@@ -1,0 +1,10 @@
+numpy
+pandas
+scanpy>=1.6.0
+matplotlib
+scipy
+sklearn
+igraph
+leidenalg
+torch
+torch_geometric==2.1.0.post1
