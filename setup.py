@@ -29,7 +29,7 @@ setup(
         'scikit-learn',
         'igraph',
         'leidenalg',
-        'torch==1.12.1',
+        'torch',
         'torch_geometric==2.1.0.post1',
     ],
 )
