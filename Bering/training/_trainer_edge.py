@@ -10,6 +10,28 @@ from ._settings import TRAIN_KEYS as TR_KEYS
 logger = logging.getLogger(__name__)
 
 class TrainerEdge(object):
+    '''
+    Trainer for edge classification model.
+
+    Parameters
+    ----------
+    model
+        Edge classification model
+    nodeclf_model
+        Node classification model. This model is used to get the latent representation from the node embeddings.
+    num_pos_edges
+        Number of positive edges
+    num_neg_edges
+        Number of negative edges
+    lr
+        Learning rate
+    weight_decay
+        Weight decay
+    weight_posEdge
+        Weight for positive edges in loss function
+    weight_negEdge
+        Weight for negative edges in loss function
+    '''
     def __init__(
         self, 
         model: EdgeClf, 
@@ -40,6 +62,16 @@ class TrainerEdge(object):
         loader, 
         image: torch.Tensor,
     ):
+        '''
+        Update the model on the training set.
+
+        Parameters
+        ----------
+        loader
+            Training data loader: ``torch_geometric.data.DataLoader``
+        image
+            image as the input for the image encoder
+        '''
         running_loss = 0.0
         for idx, batch_data in enumerate(loader):
             logger.info(f'Training batch {idx}')
@@ -68,6 +100,17 @@ class TrainerEdge(object):
         loader, 
         image: torch.Tensor,
     ):
+        '''
+        Validate the model on the test set.
+
+        Parameters
+        ----------
+        loader
+            Testing data loader: ``torch_geometric.data.DataLoader``
+        image
+            image as the input for the image encoder
+        '''
+
         running_loss = 0.0
         for idx, batch_data in enumerate(loader):
             logger.info(f'Testing batch {idx}')
@@ -94,6 +137,17 @@ class TrainerEdge(object):
 
     @torch.no_grad()
     def predict(self, batch_data, image):
+        '''
+        Predict the edge labels from the input data
+
+        Parameters
+        ----------
+        batch_data
+            Input data
+        image
+            image as the input for the image encoder
+        '''
+        
         self.model.eval()
         batch_data = batch_data.to(self.device)
 

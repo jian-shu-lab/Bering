@@ -12,6 +12,18 @@ from ._settings import TRAIN_KEYS
 
 warnings.filterwarnings("ignore")
 
+def is_notebook() -> bool:
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True   # Jupyter notebook or qtconsole
+        elif shell == 'TerminalInteractiveShell':
+            return False  # Terminal running IPython
+        else:
+            return False  # Other type (?)
+    except NameError:
+        return False      # Probably standard Python interpreter
+
 def _format_results(metric, digits = 2):
     metric = float(metric)
     metric = np.round(metric * 100, digits)
@@ -35,7 +47,7 @@ def _draw_loss(
         color = c_validation, marker = marker, linewidth = lwd, 
         markersize = mrksize, label = 'test'
     )
-    ax.set_xlabel('epochs')
+    ax.set_xlabel('Epochs')
     ax.set_ylabel('Losses')
     ax.set_title('Training Loss')
     handles, labels = ax.get_legend_handles_labels()
@@ -85,7 +97,7 @@ def _draw_auc(
         color = col_test, marker = marker, linewidth = lwd, markersize = mrksize, label = 'test'
     )
 
-    ax.set_xlabel('epochs')
+    ax.set_xlabel('Epochs')
     ax.set_ylabel('AUC')
     ax.set_title('AUC')
     
@@ -110,7 +122,7 @@ def _draw_prec(
         color = col_test, marker = marker, linewidth = lwd, markersize = mrksize, label = 'test'
     )
 
-    ax.set_xlabel('epochs')
+    ax.set_xlabel('Epochs')
     ax.set_ylabel('Precision')
     ax.set_title('Precision')
     
@@ -143,6 +155,12 @@ def _evaluate_metrics(trainer, loader):
             predictions = predictions.cpu(); batch_label = batch_label.cpu()
             num_correct += (predictions == batch_label).sum()
             num_samples += predictions.size(0)
+
+            # get major metrics
+            # from sklearn.metrics import average_precision_score, roc_auc_score, accuracy_score
+            # auc_score = roc_auc_score(y, preds)
+            # precision = average_precision_score(y, preds)
+            # accu = accuracy_score(y, preds_binary)
 
             # different errors
             label_background = int(batch_data.y.shape[1] - 1)
@@ -243,6 +261,8 @@ def record(
     test_loader: DataLoader, 
     logger: Logger, 
     plot_folder: str,
+    ax_size: float = 5.0,
+    plotting: bool = False,
     plot_name: str = 'performance.png'
 ):
     trainer.epoch_record[record_key].append(epoch)
@@ -255,9 +275,10 @@ def record(
         trainer.acc_train_record[record_key].append(acc_train)
         trainer.acc_test_record[record_key].append(acc_test)
 
-        fig, axes = plt.subplots(figsize = (22,11), nrows = 1, ncols=2)
-        axes[0] = _draw_loss(trainer, record_key, axes[0])
-        axes[1] = _draw_acc(trainer, record_key, axes[1])
+        if plotting:
+            fig, axes = plt.subplots(figsize = (ax_size*2,ax_size), nrows = 1, ncols=2, dpi = 300)
+            axes[0] = _draw_loss(trainer, record_key, axes[0])
+            axes[1] = _draw_acc(trainer, record_key, axes[1])
     else:
         auc_train, prec_train, acc_train, err_pn_train, err_np_train = _get_auc(trainer, train_loader, image)
         auc_test, prec_test, acc_test, err_pn_test, err_np_test = _get_auc(trainer, test_loader, image)
@@ -268,12 +289,13 @@ def record(
         trainer.acc_train_record[record_key].append(acc_train)
         trainer.acc_test_record[record_key].append(acc_test)
 
-        fig, axes = plt.subplots(figsize = (44, 11), ncols = 4)
-        axes[0] = _draw_loss(trainer, record_key, axes[0])
-        axes[1] = _draw_prec(trainer, record_key, axes[1])
-        axes[2] = _draw_acc(trainer, record_key, axes[2])
-        axes[3] = _draw_auc(trainer, record_key, axes[3])
-        
+        if plotting:
+            fig, axes = plt.subplots(figsize = (ax_size*4, ax_size), ncols = 4, dpi = 300)
+            axes[0] = _draw_loss(trainer, record_key, axes[0])
+            axes[1] = _draw_prec(trainer, record_key, axes[1])
+            axes[2] = _draw_acc(trainer, record_key, axes[2])
+            axes[3] = _draw_auc(trainer, record_key, axes[3])
+
     # logger
     logger.info(f'Train Loss in {record_key} network in epoch {epoch} is {(train_loss/len(train_loader.dataset)):.3f}')
     logger.info(f'Validation Loss in {record_key} network in epoch {epoch} is {(validation_loss/len(test_loader.dataset)):.3f}')
@@ -282,8 +304,15 @@ def record(
 
     # save
     # output_name = TRAIN_KEYS.FOLDER_RECORD + '/' + plot_name
-    output_name = plot_folder + '/' + plot_name
-    fig.savefig(output_name, bbox_inches = 'tight')
+    
+    # adjust gaps between subplots
+    if plotting:
+        plt.subplots_adjust(wspace = 0.5, hspace = 0.5)
+        plt.show()
+        # save
+        output_name = plot_folder + '/' + plot_name
+        fig.savefig(output_name, bbox_inches = 'tight')
+        # plt.close(fig)
 
     if trainer_phase == 'edge':
         return auc_train, auc_test, prec_train, prec_test, acc_train, acc_test

@@ -34,7 +34,7 @@ def _sample_edges(
 
     # init
     N = data.pos.shape[0]
-    cells = data.pos[:,3]
+    cells = data.pos[:,4]
 
     # get all edges
     if hasattr(data, "ptr"):

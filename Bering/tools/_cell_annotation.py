@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 
 from anndata import AnnData
+import scanpy as sc
 from scipy.sparse import csr_matrix
 
 from ..objects import Bering_Graph as BrGraph
@@ -119,7 +120,24 @@ def cell_annotation(
     min_dominant_ratio: float = 0.6,
 ):
     '''
-    Annotate segmented cells based on ensemble strategy
+    Annotate segmented cells based on ensemble strategy. A cell is considered as a qualified cell if it satisfies all of the following criteria:
+    - Number of transcripts > min_transcripts;
+    - Number of dominant nodes > min_dominant_nodes;
+    - Ratio of dominant nodes > min_dominant_ratio.
+
+    Other than that, the cell is not considered as a segmented cell and transcipts within this cell are assigned to the background.
+
+    Parameters
+    ----------
+    bg: BrGraph
+        Bering graph object
+    min_transcripts: int
+        Minimum number of transcripts for a cell to be considered
+    min_dominant_nodes: int
+        Minimum number of dominant nodes for a cell to be considered
+    min_dominant_ratio: float
+        Minimum ratio of dominant nodes for a cell to be considered
+    
     '''
     df_spots, label_dict = _ensemble_annotation(
         bg = bg, 
@@ -127,7 +145,49 @@ def cell_annotation(
         min_dominant_nodes = min_dominant_nodes, 
         min_dominant_ratio = min_dominant_ratio,
     )
-    print(df_spots.head())
     adata_ensembl, adata_segmented = _create_anndata(df_spots, label_dict)
 
     return df_spots, adata_ensembl, adata_segmented
+
+def cell_analyze(
+    adata: AnnData,
+    min_counts: int = 10,
+    target_sum: int = 1000,
+    n_neighbors: int = 10,
+):
+    '''
+    Run a standard analysis pipeline from single-cell data with raw counts. The pipeline includes:
+    - Filter cells with low counts;
+    - Normalize total counts;
+    - Scale counts;
+    - PCA;
+    - Neighbor graph construction;
+    - UMAP;
+    - Leiden clustering.
+
+    Parameters
+    ----------
+    adata: AnnData
+        Anndata object. It can be the output of :func:`~.cell_annotation` function.
+    min_counts: int
+        Minimum number of counts for a gene to be considered
+    target_sum: int
+        Target sum of counts for normalization
+    n_neighbors: int
+        Number of neighbors for KNN graph construction
+
+    Returns
+    -------
+    adata: AnnData
+        Anndata object with updated fields
+    '''
+    sc.pp.filter_cells(adata, min_counts = min_counts)
+    sc.pp.normalize_total(adata, target_sum = target_sum)
+    sc.pp.log1p(adata)
+    sc.pp.scale(adata)
+
+    sc.tl.pca(adata)
+    sc.pp.neighbors(adata, n_neighbors = n_neighbors)
+    sc.tl.umap(adata)
+    sc.tl.leiden(adata)
+    return adata

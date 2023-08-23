@@ -13,15 +13,17 @@ def _get_pos(
 ):
     x = df_spots.x.values
     y = df_spots.y.values
+    z = df_spots.z.values
     tps_names = df_spots.index.values
 
-    pos = np.array([tps_names, x, y]).T
+    # pos = np.array([tps_names, x, y]).T
+    pos = np.array([tps_names, x, y, z]).T
     pos = torch.from_numpy(pos).double()
     return pos
 
 def _get_node_embedding_prediction_byTiling(bg, df_spots, num_chunks, n_neighbors, beta, dummy = 1e-3):
     '''
-    Split spots tables into tiles by coordinates if the number of spots is too large
+    Split spots tables into tiles by coordinates if the number of spots is too large (use 2d chunks here)
     '''
     x, y = df_spots.x.values, df_spots.y.values
     num_chunks_axis = np.round(np.sqrt(num_chunks)).astype(int)
@@ -95,6 +97,34 @@ def node_classification(
     max_num_spots: int = 1500000, #1.5 million
     num_chunks: int = 25,
 ):
+    '''
+    Node classification for all spots in the slice
+
+    Parameters
+    ----------
+    bg: BrGraph
+        Bering Graph object
+    df_spots: pd.DataFrame
+        spots table. It can be ``bg.spots_all`` in case of whole slice prediction
+    n_neighbors: int
+        number of neighbors for graph construction
+    prob_threshold: float
+        minimal threshold of predicted probability for spots to be considered as foreground
+    max_num_spots: int
+        maximum number of spots for node classification in each chunk. 
+        If the number of spots is larger than this number, the spots table will be split into chunks by coordinates.
+    num_chunks: int
+        number of chunks for node classification. This is done by splitting the spots table into chunks by coordinates.
+        This is used when the number of spots is too large. Refer to `_get_node_embedding_prediction_byTiling` for details.
+
+    Returns
+    -------
+    preds_labels: np.array
+        predicted labels for all spots
+    graph_all: torch_geometric.data.Data
+        graph (``torch_geometric.data.Data`` object) for the whole slice
+    '''
+
     # build graph
     logger.info(f'Building Graph for the whole slice')
     try:

@@ -29,8 +29,10 @@ def _GET_CMAPS():
     return cmap
 
 class _PLOTTING_KEYS(NamedTuple):
-    AX_WIDTH: float = 8.0
-    AX_HEIGHT: float = 8.0
+    # AX_WIDTH: float = 8.0
+    # AX_HEIGHT: float = 8.0
+    AX_WIDTH: float = 5.0
+    AX_HEIGHT: float = 5.0
     AX_WIDTH_SLICE: float = 16.0
     AX_HEIGHT_SLICE: float = 16.0
     COLOR_SEG: str = '#FFFFFF'
@@ -38,8 +40,10 @@ class _PLOTTING_KEYS(NamedTuple):
     SIZE_PT_LOCAL: float = 0.25
     SIZE_PT_CELL_ONSLICE: float = 2.5
     SIZE_PT_WINDOW: float = 6.0
-    SIZE_LEGEND_MARKER: float = 5.5
-    SIZE_LEGEND_FTSIZE: float = 14
+    # SIZE_LEGEND_MARKER: float = 5.5
+    # SIZE_LEGEND_FTSIZE: float = 14
+    SIZE_LEGEND_MARKER: float = 4.0
+    SIZE_LEGEND_FTSIZE: float = 10
     SIZE_FT_CELL: float = 10.0
     ALPHA_BG: float = 0.5
     WINDOW_LINEWIDTH: float = 1.0

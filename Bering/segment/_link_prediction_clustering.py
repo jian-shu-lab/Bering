@@ -39,13 +39,16 @@ def _get_edge_embedding(
         trainer.model.encoder_image.eval()
 
     if trainer.model.distance_type == 'positional':
-        z_node = torch.cat((z_node, pos[:,[1,2]]), axis = -1)
+        # z_node = torch.cat((z_node, pos[:,[1,2]]), axis = -1) # 2d
+        z_node = torch.cat((z_node, pos[:,[1,2,3]]), axis = -1) # 3d
     src = edge_indices[:,0]
     dst = edge_indices[:,1]
 
     edge_attr = torch.cat((z_node[src], z_node[dst]), axis = -1)
-    src_coords = pos[src, :][:,[1,2]]
-    dst_coords = pos[dst, :][:,[1,2]]
+    # src_coords = pos[src, :][:,[1,2]] # 2d
+    # dst_coords = pos[dst, :][:,[1,2]]
+    src_coords = pos[src, :][:,[1,2,3]] # 3d
+    dst_coords = pos[dst, :][:,[1,2,3]]
 
     if trainer.model.distance_type == 'rbf':
         trainer.model.rbf_kernel.to('cpu')
@@ -184,7 +187,7 @@ def _get_edge_chunks_random(edges_whole, num_chunks):
 
 def _get_edge_chunks_byTiling(edges_whole, num_chunks, x, y):
     '''
-    split the edges into chunks by tiling the image
+    split the edges into chunks by tiling the image (separate chunks by 2d coordinates here)
     '''
     src_x, src_y = x[edges_whole[:,0]], y[edges_whole[:,0]]
     dst_x, dst_y = x[edges_whole[:,1]], y[edges_whole[:,1]]
@@ -223,8 +226,12 @@ def run_leiden_predictedLink(
     split_edges_byTiling: bool = False,
 ):  
     # get all edges at once
-    x, y = df_spots['x'].values, df_spots['y'].values
-    coords = np.array([x, y]).T
+    if bg.dimension == '2d':
+        x, y = df_spots['x'].values, df_spots['y'].values
+        coords = np.array([x, y]).T
+    else:
+        x, y, z = df_spots['x'].values, df_spots['y'].values, df_spots['z'].values
+        coords = np.array([x, y, z]).T
     N_nodes = df_spots.shape[0]
 
     A = kneighbors_graph(coords, num_edges_perSpot, mode = 'connectivity', include_self = False)
@@ -234,12 +241,14 @@ def run_leiden_predictedLink(
     logger.info(f'Total number of edges for segmentation task is {edges_whole.shape[0]}')
 
     # chunk edges
+    logger.info(f'Split edges into chunks, number of chunks: {num_iters}')
     if split_edges_byTiling == False:
         edges_whole_sections = _get_edge_chunks_random(edges_whole, num_iters)
     else:
         edges_whole_sections, num_iters = _get_edge_chunks_byTiling(edges_whole, num_iters, x, y)
     
     # prepare graph and node embeddings
+    logger.info(f'Prepare graph and node embeddings')
     if (not hasattr(bg, 'graph_all')) and (not hasattr(bg, 'z_all')):
         graph_whole = BuildGraph_fromRaw(bg, df_spots.copy(), bg.features.copy(), n_neighbors = n_neighbors).cpu()
         pos_whole = graph_whole.pos

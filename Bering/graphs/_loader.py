@@ -12,6 +12,8 @@ from ._settings import GRAPH_KEYS as G_KEYS
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["spatial_neighbors"]
+
 def BuildWindowGraphs(
     bg: BrGraph, 
     n_cells_perClass: int = 10, 
@@ -19,17 +21,51 @@ def BuildWindowGraphs(
     window_height: float = G_KEYS.WINDOW_HEIGHT, 
     n_neighbors: int = G_KEYS.N_NEIGHBORS, 
     min_points: int = G_KEYS.WINDOW_MIN_POINTS,
-    prop_unseg: float = 0.8, 
+    use_unsegmented_ratio: float = 0.8, 
     max_unsegmented_thresh: float = 0.4,
     cell_percentile_from_border: float = 10,
-    slide_window_ratio: float = 0.25,
+    window_shift_ratio: float = 0.25,
     n_windows_per_cell: int = 5,
     min_spots_outside: int = 5,
     **kwargs,
 ):
-    '''
-    Build Graphs for originally segemented cells (labelled / golden truth)
-    '''
+    """
+    Build Graphs for originally segemented cells. We randomly select a subset of cells and get their neighboring regions (windows) to construct graphs.
+
+    Parameters
+    ----------
+    bg
+        Bering_Graph object
+    n_cells_perClass
+        Number of cells per cell class for training
+    window_width
+        Width of each selected region for graph construction
+    window_height
+        Height of each selected region for graph construction
+    n_neighbors
+        Number of neighbors in KNN
+    min_points
+        Minimum number of points in a window
+    use_unsegmented_ratio
+        Proportion of unsegmented spots used in a window
+    max_unsegmented_thresh
+        Maximum proportion of unsegmented spots in a window
+    cell_percentile_from_border
+        Remove cells in the border that are too close (within the defined percentile) to the image border
+    window_shift_ratio
+        To balance the transcripts within cells and out of cells, we shift the window to the centroid of the cell by a ratio of the cell diameter
+    n_windows_per_cell
+        Number of windows per cell. Available options are 1, 3, 5
+    min_spots_outside
+        Minimum number of spots outside the cell
+    **kwargs
+        Other arguments for BuildGraph
+
+    Returns
+    -------
+    ``Bering_Graph.Graphs_golden``: :func:`~BrGraph` object with a list of graphs (``torch_geometric.data.Data``) for training
+    """
+
     # init
     Spots = bg.spots_all.copy()
     Graphs = []
@@ -51,7 +87,7 @@ def BuildWindowGraphs(
 
     counts = 0
     for cell_idx, cell in enumerate(selected_cells):
-        cx, cy, d = bg.segmented.loc[cell, 'cx'], bg.segmented.loc[cell, 'cy'], bg.segmented.loc[cell, 'd']
+        cx, cy, cz, d = bg.segmented.loc[cell, 'cx'], bg.segmented.loc[cell, 'cy'], bg.segmented.loc[cell, 'cz'], bg.segmented.loc[cell, 'd']
 
         if n_windows_per_cell == 1:
             xc_list = [cx]
@@ -59,19 +95,24 @@ def BuildWindowGraphs(
             # xc_list = [cx-d*slide_window_ratio]
             # yc_list = [cy+d*slide_window_ratio]
         elif n_windows_per_cell == 3:
-            xc_list = [cx-d*slide_window_ratio, cx, cx+d*slide_window_ratio]
-            yc_list = [cy+d*slide_window_ratio, cy, cy-d*slide_window_ratio]
+            xc_list = [cx - d * window_shift_ratio, cx, cx + d * window_shift_ratio]
+            yc_list = [cy + d * window_shift_ratio, cy, cy - d * window_shift_ratio]
+            zc_list = [cz + d * window_shift_ratio, cz, cz - d * window_shift_ratio]
         elif n_windows_per_cell == 5:
-            xc_list = [cx-d*slide_window_ratio, cx-d*slide_window_ratio, cx, cx+d*slide_window_ratio, cx+d*slide_window_ratio]
-            yc_list = [cy+d*slide_window_ratio, cy-d*slide_window_ratio, cy, cy+d*slide_window_ratio, cy-d*slide_window_ratio]
+            xc_list = [cx - d * window_shift_ratio, cx - d * window_shift_ratio, cx, cx + d * window_shift_ratio, cx + d * window_shift_ratio]
+            yc_list = [cy + d * window_shift_ratio, cy - d * window_shift_ratio, cy, cy + d * window_shift_ratio, cy - d * window_shift_ratio]
+            zc_list = [cz + d * window_shift_ratio, cz - d * window_shift_ratio, cz, cz + d * window_shift_ratio, cz - d * window_shift_ratio]
         
         positions = ['topleft', 'bottomleft', 'centroid', 'topright', 'bottomright']
         for xc, yc, pos in zip(xc_list, yc_list, positions):
             # define the core window
-            xmin, ymin = xc - window_width / 2, yc - window_height / 2
-            xmax, ymax = xc + window_width / 2, yc + window_height / 2
+            xmin, ymin, zmin = xc - window_width / 2, yc - window_height / 2, cz - window_width / 2
+            xmax, ymax, zmax = xc + window_width / 2, yc + window_height / 2, cz + window_width / 2
 
-            window_spots = Spots.loc[(Spots.x > xmin) & (Spots.x < xmax) & (Spots.y > ymin) & (Spots.y < ymax), :].copy()
+            if bg.dimension == '2d':
+                window_spots = Spots.loc[(Spots.x > xmin) & (Spots.x < xmax) & (Spots.y > ymin) & (Spots.y < ymax), :].copy()
+            elif bg.dimension == '3d':
+                window_spots = Spots.loc[(Spots.x > xmin) & (Spots.x < xmax) & (Spots.y > ymin) & (Spots.y < ymax) & (Spots.z > zmin) & (Spots.z < zmax), :].copy()
             if window_spots.shape[0] == 0:
                 continue
             
@@ -88,7 +129,7 @@ def BuildWindowGraphs(
                 continue
 
             # get subset of unlabelled spots
-            unseg_indices = random.sample(list(range(window_unseg.shape[0])), int(window_unseg.shape[0] * prop_unseg))
+            unseg_indices = random.sample(list(range(window_unseg.shape[0])), int(window_unseg.shape[0] * use_unsegmented_ratio))
             window_unseg = window_unseg.iloc[unseg_indices,:].copy()
             window_spots = pd.concat([window_seg, window_unseg], axis = 0)
 
@@ -117,6 +158,20 @@ def CreateData(
 ):
     '''
     Create training and testing data loader
+
+    Parameters
+    ----------
+    bg
+        Bering_Graph object
+    batch_size
+        Batch size for training
+    training_ratio
+        Ratio of training data to the total data
+    
+    Returns
+    -------
+        - ``Bering_Graph.train_loader``: Training data loader (``torch_geometric.data.DataLoader``)
+        - ``Bering_Graph.test_loader``: Testing data loader (``torch_geometric.data.DataLoader``)
     '''
     # initialize
     logger.info(f'Create training and testing datasets (golden truth)')

@@ -29,6 +29,7 @@ def _get_edge_index(
     '''
     x = df_spots.x.values
     y = df_spots.y.values
+    z = df_spots.z.values
     tps_features = df_spots.features.values
     
     features = df_features.index.values
@@ -37,7 +38,7 @@ def _get_edge_index(
     tps_features_indices = np.array([feature_dict[i] for i in tps_features])
     
     ### edges
-    coords = np.array([x, y]).T 
+    coords = np.array([x, y, z]).T 
     A = kneighbors_graph(
         coords, n_neighbors = n_neighbors, mode = 'distance'
     ) # Adjacency
@@ -81,11 +82,11 @@ def _get_node_features(
         Indices for transcript features
     '''
     n_tps = df_spots.shape[0]
-    x, y = df_spots.x.values, df_spots.y.values
+    x, y, z = df_spots.x.values, df_spots.y.values, df_spots.z.values
     X_coords = None; X_trans = None; X_morpho = None
 
     if use_coordinates:
-        X_coords = np.array([x, y]).T
+        X_coords = np.array([x, y, z]).T
 
     if use_transcriptomics:
         X_trans = coo_matrix((np.ones(A.data.shape[0]), (A.row, tps_features_indices[A.col])), shape = (n_tps, n_features)).toarray().astype(np.float32)
@@ -121,14 +122,15 @@ def _get_pos(
     '''
     x = df_spots.x.values
     y = df_spots.y.values
+    z = df_spots.z.values
     tps_names = df_spots.index.values
 
-    pos = np.array([tps_names, x, y]).T
+    pos = np.array([tps_names, x, y, z]).T
     pos = torch.from_numpy(pos).double()
     return pos
 
 def BuildGraph_fromRaw(
-    bg, 
+    bg: BrGraph, 
     df_spots: pd.DataFrame,
     df_features: pd.DataFrame,
     n_neighbors: int = 10,
@@ -140,10 +142,20 @@ def BuildGraph_fromRaw(
 
     Parameters
     ----------
+    bg
+        Bering object
     df_spots
         input dataframe of spots with columns of x, y and features
     df_features
         the metadata table of all features
+    n_neighbors
+        number of neighbors in KNN
+    device
+        device to run the model. Options: 'cuda' or 'cpu'
+    
+    Returns
+    -------
+    Graph of ``torch_geometric.data.Data``
     '''
     
     # get edges

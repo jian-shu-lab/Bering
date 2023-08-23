@@ -5,7 +5,7 @@ import logging
 import warnings
 import numpy as np
 import pandas as pd
-
+from typing import Optional
 
 import leidenalg as la
 from sklearn.metrics import adjusted_rand_score
@@ -22,7 +22,7 @@ from ..graphs import BuildGraph, BuildGraph_fromRaw
 from ..segment import find_clusters_predictedLinks
 from ..objects import Bering_Graph as BrGraph
 from ._plot_elements import _raw_segmentation, _raw_cell_types, _raw_cell_types_addPatch
-from ._plot_elements import _predicted_cell_types, _predicted_probability, _draw_cells_withStaining
+from ._plot_elements import _predicted_cell_types, _predicted_probability, _draw_cells_withStaining, _draw_cells_withStaining_convexhull
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger(__name__)
@@ -79,8 +79,14 @@ def Plot_SliceImages(
     bg: BrGraph,
 ):
     '''
-    Plot the whole slice
+    Plot the whole slice, with individual segmented cells as spots.
+
+    Parameters
+    ----------
+    bg: BrGraph
+        Bering Graph object
     '''
+
     if len(bg.label_to_col) == 0:
         bg.label_to_col = dict(zip(bg.labels, CMAP[:bg.n_labels]))
         bg.label_to_col['background'] = '#C0C0C0'
@@ -105,6 +111,47 @@ def Plot_SliceImages(
     output_name = PLT_KEYS.FOLDER_NAME + '/' + PLT_KEYS.FILE_PREFIX_RAWSLICE + 'labels' + PLT_KEYS.FILE_FORMAT
     fig.savefig(output_name, bbox_inches = 'tight')
 
+def Plot_Spots(
+    bg: Optional[BrGraph] = None,
+    df_spots_seg: Optional[pd.DataFrame] = None,
+    df_spots_unseg: Optional[pd.DataFrame] = None,
+):
+    '''
+    Visualize both segmented and unsengmented spots
+
+    Parameters
+    ----------
+    bg: BrGraph
+        Bering Graph object. 
+        - If bg is not None, then df_spots_seg and df_spots_unseg are ignored.
+        - If bg is None, then df_spots_seg and df_spots_unseg must be provided.
+    df_spots_seg: pd.DataFrame
+        DataFrame of segmented spots
+    df_spots_unseg: pd.DataFrame
+        DataFrame of unsegmented spots
+    '''
+
+    if bg is not None:
+        df_spots_seg = bg.spots_seg.copy()
+        df_spots_unseg = bg.spots_unseg.copy()
+
+    x, y = df_spots_seg['x'].values, df_spots_seg['y'].values
+    cell_types = df_spots_seg['labels'].values
+
+    fig, ax = plt.subplots(figsize = (5, 5))
+    for idx, cell_type in enumerate(np.unique(cell_types)):
+        
+        xc = x[np.where(cell_types == cell_type)[0]]
+        yc = y[np.where(cell_types == cell_type)[0]]
+
+        ax.scatter(xc, yc, s = 0.03, label = cell_type, color = np.random.rand(3,))
+
+    xb, yb = df_spots_unseg['x'].values, df_spots_unseg['y'].values
+    ax.scatter(xb, yb, color = '#DCDCDC', alpha = 0.2, s = 0.015, label = 'background')
+
+    h, l = ax.get_legend_handles_labels()
+    plt.legend(h, l, loc = 'upper right', fontsize = 8, markerscale = 15)
+
 def Plot_Classification(
     bg: BrGraph, 
     cell_name: str, 
@@ -113,7 +160,29 @@ def Plot_Classification(
     zoomout_scale: float = 8.0,
 ):
     '''
-    Plot original spots and newly-segmented spots
+    Plot node classfication results on the original data and predicted data.
+    
+    Parameters
+    ----------
+    bg: BrGraph
+        Bering Graph object
+    cell_name: str
+        Name of the cell to plot
+    n_neighbors: int
+        Number of neighbors to build the knn graph
+    min_prob: float
+        Minimum probability threshold to classify a valid cell type (otherwise background)
+    zoomout_scale: float
+        Zoom out scale (relative to the cell diameter) to show the region
+    
+    Returns
+    -------
+    - df_window_raw: ``pd.DataFrame``
+        DataFrame of the raw spots in the window
+    - df_window_pred: ``pd.DataFrame``
+        DataFrame of the predicted spots in the window
+    - predictions: ``np.ndarray``
+        Array of predicted labels
     '''
     # BUILD GRAPHS
     if len(bg.label_to_col) == 0:
@@ -152,11 +221,11 @@ def Plot_Classification(
     else:
         dapi = None
     axes[0, 0] = _raw_segmentation(dapi, x, y, axes[0,0], seg_types)
-    axes[1, 0] = _raw_cell_types(dapi, x, y, axes[1, 0], raw_labels, label_to_col)
-    axes[0, 1] = _predicted_cell_types(dapi, x, y, axes[0, 1], pred_labels, label_to_col)
+    axes[0, 1] = _raw_cell_types(dapi, x, y, axes[0, 1], raw_labels, label_to_col)
+    axes[1, 0] = _predicted_cell_types(dapi, x, y, axes[1, 0], pred_labels, label_to_col)
     axes[1, 1], prob_plot = _predicted_probability(dapi, x, y, axes[1, 1], max_probs)
-    axes[0, 1].set_title(f'Predicted Annotations (Accu={accuracy:.2f})')
-    plt.colorbar(prob_plot, ax = axes[1,1])
+    axes[1, 0].set_title(f'Predicted Annotations (Accu={accuracy:.2f})')
+    plt.colorbar(prob_plot, ax = axes[1,1], shrink = 0.8)
     fig.tight_layout()
 
     # SAVE
@@ -181,10 +250,41 @@ def Plot_Segmentation(
     num_edges_perSpot: int = 300,
     min_prob_nodeclf: float = 0.3,
     n_iters: int = 10,
+    convex_hull: bool = False,
 ):
     '''
-    Plot Original Cell IDs and Cell ID distribution on latent space
-    Either input a cell name and then extract a table or a pre-filtered spots window.
+    Plot the segmentation results with cell IDs on the original data and predicted data.
+
+    Parameters
+    ----------
+    bg: BrGraph
+        Bering Graph object
+    cell_name: str
+        Name of the cell to plot
+    df_window_raw: pd.DataFrame
+        DataFrame of the raw spots in the window
+    df_window_pred: pd.DataFrame
+        DataFrame of the predicted spots in the window
+    predictions: np.ndarray
+        Array of predicted labels. This is used to identify the foreground spots.
+    n_neighbors: int
+        Number of neighbors to build the knn graph
+    zoomout_scale: float
+        Zoom out scale (relative to the cell diameter) to show the region
+    use_image: bool
+        Whether to use the image to build the graph
+    pos_thresh: float
+        Threshold to determine whether the predicted edge is positive in the segmentation step
+    resolution: float
+        Resolution of Leiden clustering algorithm in the segmentation step
+    num_edges_perSpot: int
+        Number of nearest edges used to investigate edge labels (positive or negative) for each spot
+    min_prob_nodeclf: float
+        Minimum probability threshold to classify a valid cell type (otherwise background)
+    n_iters: int
+        Number of iterations. Each iteration runs on a subset of edges. This is used to avoid memory overflow.
+    convex_hull: bool
+        Whether to use convex hull to draw the cells
     '''
     Spots = bg.spots_all.copy()
     cell_metadata = bg.segmented.copy()
@@ -218,25 +318,43 @@ def Plot_Segmentation(
     )[resolution]
     cells_pred[np.where(predictions != bg.n_labels - 1)[0]] = cls_predlink
     cells_pred[np.where(predictions == bg.n_labels - 1)[0]] = -1
+    
+    # get labels
+    raw_labels = df_window_raw.labels.values
+    pred_labels = np.array([bg.label_indices_dict[i] for i in predictions])
+    
 
-    ARI_score_predlink = adjusted_rand_score(cells_raw, cells_pred)
+    # ARI_score_predlink = adjusted_rand_score(cells_raw, cells_pred)
     x_raw, y_raw = df_window_raw.x.values, df_window_raw.y.values
     x_predfore, y_predfore = df_window_pred.x.values, df_window_pred.y.values
 
     if bg.channels is not None:
         fig, axes = plt.subplots(figsize = (PLT_KEYS.AX_WIDTH * (bg.n_channels + 1) * 0.8, PLT_KEYS.AX_HEIGHT * 0.8), ncols = bg.n_channels + 1, nrows = 1, sharex = True, sharey = True)
         for idx in range(bg.n_channels):
-            axes[idx] = _draw_cells_withStaining(bg.image_raw[idx], x_raw, y_raw, axes[idx], cells_raw, 'Raw (w. ' + bg.channels[idx] + ')')
+            if convex_hull:
+                axes[idx] = _draw_cells_withStaining_convexhull(bg.image_raw[idx], x_raw, y_raw, axes[idx], cells_raw, raw_labels, bg.label_to_col, 'Raw (w. ' + bg.channels[idx] + ')' )
+            else:
+                axes[idx] = _draw_cells_withStaining(bg.image_raw[idx], x_raw, y_raw, axes[idx], cells_raw, 'Raw (w. ' + bg.channels[idx] + ')')
 
-        axes[-1] = _draw_cells_withStaining(bg.image_raw[0], x_predfore, y_predfore, axes[-1], cls_predlink, 'Pred (w. DAPI, ARI=' + str(np.round(ARI_score_predlink,2)) + ')')
+        if convex_hull:
+            axes[idx] = _draw_cells_withStaining_convexhull(bg.image_raw[0], x_predfore, y_predfore, axes[-1], cls_predlink, pred_labels, bg.label_to_col, 'Pred (w. DAPI)')
+        else:
+            axes[-1] = _draw_cells_withStaining(bg.image_raw[0], x_predfore, y_predfore, axes[-1], cls_predlink, 'Pred (w. DAPI)')
 
     else:
         fig, axes = plt.subplots(figsize = (PLT_KEYS.AX_WIDTH * 2 * 0.8, PLT_KEYS.AX_HEIGHT * 0.8), ncols = 2, nrows = 1, sharex = True, sharey = True)
-        axes[0] = _draw_cells_withStaining(None, x_raw, y_raw, axes[0], cells_raw, 'Raw')
-        axes[1] = _draw_cells_withStaining(None, x_predfore, y_predfore, axes[1], cls_predlink, 'Pred (ARI=' + str(np.round(ARI_score_predlink,2)) + ')')
+        if convex_hull:
+            axes[0] = _draw_cells_withStaining_convexhull(None, x_raw, y_raw, axes[0], cells_raw, raw_labels, bg.label_to_col, 'Raw')
+        else:
+            axes[0] = _draw_cells_withStaining(None, x_raw, y_raw, axes[0], cells_raw, 'Raw')
+
+        # axes[1] = _draw_cells_withStaining(None, x_predfore, y_predfore, axes[1], cls_predlink, 'Pred (ARI=' + str(np.round(ARI_score_predlink,2)) + ')')
+        if convex_hull:
+            axes[1] = _draw_cells_withStaining_convexhull(None, x_predfore, y_predfore, axes[1], cls_predlink, pred_labels, bg.label_to_col, 'Predicted')
+        else:
+            axes[1] = _draw_cells_withStaining(None, x_predfore, y_predfore, axes[1], cls_predlink, 'Predicted')
 
     fig.tight_layout()
 
     output_name = PLT_KEYS.FOLDER_NAME + '/' + PLT_KEYS.FILE_PREFIX_SEGMENTATION + str(cell_name) + PLT_KEYS.FILE_FORMAT
     fig.savefig(output_name, bbox_inches = 'tight')
-    plt.close(fig)

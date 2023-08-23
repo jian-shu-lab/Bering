@@ -23,6 +23,7 @@ def _get_image_graph(
     '''
     Extract the graph image for edge embedding; recalculate source and destination node coordinates
     '''
+
     pos_graph = pos[:,[1,2]]
     xmin, xmax = int(torch.min(pos_graph[:,0]))-conv2d_padding, int(torch.max(pos_graph[:,0]))+conv2d_padding
     ymin, ymax = int(torch.min(pos_graph[:,1]))-conv2d_padding, int(torch.max(pos_graph[:,1]))+conv2d_padding
@@ -58,6 +59,41 @@ def _get_binned_coordinates(
     return minx, maxx, miny, maxy, avail_bins, dist_bins_2d
 
 class EdgeClf(nn.Module):
+    '''
+    Edge classifier model which learns node classification embedding, image embedding and distance kernel
+
+    Parameters
+    ----------
+    n_node_latent_features
+        Number of latent features from node classification model
+    image
+        Image tensor for computing the conv2d embedding
+    image_model
+        Whether to use image model
+    decoder_mlp_layer_dims
+        List of hidden layer dimensions for MLP
+    distance_type
+        Type of RBF distance kernel. Options are None, 'positional', 'rbf'
+    rbf_start
+        Start of RBF kernel parameter \mu. Refer to :func:`~GaussianSmearing`
+    rbf_stop
+        Stop of RBF kernel parameter \mu. Refer to :func:`~GaussianSmearing`
+    rbf_n_kernels
+        Number of kernels in RBF kernel. Refer to :func:`~GaussianSmearing`
+    rbf_learnable
+        Whether to learn the RBF kernel in backpropagation. Refer to :func:`~GaussianSmearing`
+    encoder_image_layer_dims_conv2d
+        List of hidden layer dimensions for CNN in image encoder. Refer to :func:`~ImageEncoder`
+    encoder_image_layer_dims_mlp
+        List of hidden layer dimensions for MLP in image encoder. Refer to :func:`~ImageEncoder`
+    subimage_binsize
+        Binning size of subimage of edges
+    max_subimage_size
+        Maximal size of subimage of edges after crop
+    min_subimage_size
+        Minimal size of subimage of edges after crop
+
+    '''
     def __init__(
         self, 
         n_node_latent_features: int, 
@@ -75,12 +111,6 @@ class EdgeClf(nn.Module):
         max_subimage_size: int = 40,
         min_subimage_size: int = 5,
     ):
-        '''
-        Edge classifier model which learns node classification embedding, image embedding and distance kernel
-
-        Parameters
-        ----------
-        '''
         super().__init__()
 
         # RBF distance kernel
@@ -147,8 +177,7 @@ class EdgeClf(nn.Module):
     ):
         '''
         Run the decoder model from latent space z.
-        Before running the decoder, random positive and negative 
-        edges are generated as the input. 
+        Before running the decoder, random positive and negative edges are generated as the input. 
 
         Parameters
         -----------
@@ -164,12 +193,6 @@ class EdgeClf(nn.Module):
             Image tensor for computing the conv2d embedding
         conv2d_padding
             add paddings in the conv2d embedding 
-        image_binsize
-            binning size of subimage of edges
-        max_image_size
-            maximal size of subimage of edges after crop
-        min_image_size
-            minimal size of subimage of edges after crop
         '''
 
         # sample random edges each time
@@ -187,8 +210,10 @@ class EdgeClf(nn.Module):
 
             # get attributes
             edge_attr = torch.cat([z_node[src], z_node[dst]], dim = -1)
-            src_coords = data.pos[src, :][:,[1,2]]
-            dst_coords = data.pos[dst, :][:,[1,2]]
+            # src_coords = data.pos[src, :][:,[1,2]] # 2d
+            # dst_coords = data.pos[dst, :][:,[1,2]]
+            src_coords = data.pos[src, :][:,[1,2,3]] # 3d
+            dst_coords = data.pos[dst, :][:,[1,2,3]]
 
             if self.distance_type == 'rbf':
                 edge_attr_rbf = self.rbf_kernel(x = src_coords, y = dst_coords)            

@@ -9,6 +9,23 @@ from ..models import GCN, BaselineMLP
 from ._settings import TRAIN_KEYS as TR_KEYS
 
 class TrainerNode(object):
+    '''
+    Trainer for node classification model.
+
+    Parameters
+    ----------
+    model
+        Node classification model
+    lr
+        Learning rate
+    weight_decay
+        Weight decay
+    weight_seg
+        Weight for segmented transcripts in loss function
+    weight_bg
+        Weight for background transcripts in loss function
+
+    '''
     def __init__(
         self, 
         model: Optional[nn.Module] = GCN,
@@ -32,6 +49,15 @@ class TrainerNode(object):
         self, 
         loader, 
     ):
+        '''
+        Update the model on the training set.
+
+        Parameters
+        ----------
+        loader
+            Training data loader: ``torch_geometric.data.DataLoader``
+        '''
+
         running_loss = 0.0
         for batch_data in loader:
             n_classes = int(batch_data.y.shape[1])
@@ -57,6 +83,14 @@ class TrainerNode(object):
         self, 
         loader, 
     ):
+        '''
+        Validate the model on the test set.
+
+        Parameters
+        ----------
+        loader
+            Validation data loader: ``torch_geometric.data.DataLoader``
+        '''
         running_loss = 0.0
         self.model.eval()
 
@@ -78,6 +112,16 @@ class TrainerNode(object):
 
     @torch.no_grad()
     def predict(self, batch_data, device = None):
+        '''
+        Predict the class probabilities of the input data.
+
+        Parameters
+        ----------
+        batch_data
+            Input data: ``torch_geometric.data.Data``
+        device
+            Device to run the model. Options: 'cuda' or 'cpu'
+        '''
         self.model.eval()
         if device is None:
             batch_data = batch_data.to(self.device)

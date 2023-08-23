@@ -12,6 +12,16 @@ def add_image_features(
     bg: BrGraph,
     normalize: bool = True,
 ):
+    '''
+    Add image features to spots
+
+    Parameters
+    ----------
+    bg
+        Bering_Graph object
+    normalize
+        Normalize image to [0, 1]
+    '''
     img = bg.image 
 
     if normalize:

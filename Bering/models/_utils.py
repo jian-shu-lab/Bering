@@ -1,13 +1,13 @@
-# https://torchdrug.ai/docs/_modules/torchdrug/layers/common.html#GaussianSmearing
 import torch
 import torch.nn as nn
 
 class GaussianSmearing(nn.Module):
     r"""
-    Gaussian smearing from
-    `SchNet: A continuous-filter convolutional neural network for modeling quantum interactions`_.
+    This function is from ``torchdrug`` package.
+        Gaussian smearing from
+        `SchNet: A continuous-filter convolutional neural network for modeling quantum interactions`_.
 
-    There are two modes for Gaussian smearing.
+        There are two modes for Gaussian smearing.
 
     Non-centered mode:
 
@@ -24,15 +24,28 @@ class GaussianSmearing(nn.Module):
     .. _SchNet\: A continuous-filter convolutional neural network for modeling quantum interactions:
         https://arxiv.org/pdf/1706.08566.pdf
 
-    Parameters:
-        start (int, optional): minimal input value
-        stop (int, optional): maximal input value
-        num_kernel (int, optional): number of RBF kernels
-        centered (bool, optional): centered mode or not
-        learnable (bool, optional): learnable gaussian parameters or not
+    Parameters
+    ----------
+    start
+        minimal input value
+    stop
+        maximal input value
+    num_kernel
+        number of RBF kernels
+    centered
+        centered mode or not
+    learnable
+        learnable gaussian parameters or not
     """
 
-    def __init__(self, start=0, stop=5, num_kernel=100, centered=False, learnable=False):
+    def __init__(
+        self, 
+        start: float = 0,
+        stop: float = 5,
+        num_kernel: int = 300, 
+        centered: bool = False,
+        learnable: bool = False,
+    ):
         super(GaussianSmearing, self).__init__()
         if centered:
             mu = torch.zeros(num_kernel)

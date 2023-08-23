@@ -8,13 +8,17 @@ from ._settings import _PLOT_SETTINGS, _GET_CMAPS
 from ._settings import PLOT_KEYS as PLT_KEYS
 from ..segment import SEGMENT_KEYS as SEG_KEYS
 
+import warnings
+warnings.filterwarnings("ignore")
+
 _PLOT_SETTINGS()
 CMAP = _GET_CMAPS() # discrete
 CMAP_CONT = cm.get_cmap('binary_r') # continuous
 
 def _show_legends(ax, markerscale, fontsize):
     h, l = ax.get_legend_handles_labels()
-    ax.legend(h, l, markerscale = markerscale, fontsize = fontsize)
+    ncol = 1 if len(l) < 8 else int(len(l)/8)
+    ax.legend(h, l, markerscale = markerscale, fontsize = fontsize, ncol = ncol)
     return ax
 
 def _raw_spots(img, x, y, ax, title = None, alpha = 0.7, **kwargs):
@@ -42,7 +46,7 @@ def _raw_segmentation(img, x, y, ax, seg_types, **kwargs):
     ymin, ymax = y.min(), y.max()
     if img is not None:
         img = img[int(ymin):int(ymax), int(xmin):int(xmax)].copy()
-        ax.imshow(img, alpha = 0.5, cmap = 'gray')
+        ax.imshow(img, alpha = 0.5, cmap = '#DCDCDC')
 
     x = x - xmin 
     y = y - ymin
@@ -79,7 +83,7 @@ def _raw_cell_types(img, x, y, ax, raw_labels, label_to_col, s = None, **kwargs)
         xs = x[np.where(raw_labels == label)[0]]
         ys = y[np.where(raw_labels == label)[0]]
 
-        s = s if s!=None else PLT_KEYS.SIZE_PT_LOCAL
+        s = PLT_KEYS.SIZE_PT_LOCAL if s is None else s
         if label == 'background':
             ax.scatter(
                 xs, ys, label = label,
@@ -112,7 +116,7 @@ def _predicted_cell_types(img, x, y, ax, pred_labels, label_to_col, s = None, **
     ymin, ymax = y.min(), y.max()
     if img is not None:
         img = img[int(ymin):int(ymax), int(xmin):int(xmax)].copy()
-        ax.imshow(img, alpha = 0.5, cmap = 'gray')
+        ax.imshow(img, alpha = 0.5, cmap = '#DCDCDC')
     x = x - xmin 
     y = y - ymin
 
@@ -120,7 +124,7 @@ def _predicted_cell_types(img, x, y, ax, pred_labels, label_to_col, s = None, **
         xs = x[np.where(pred_labels == label)[0]]
         ys = y[np.where(pred_labels == label)[0]]
 
-        s = PLT_KEYS.SIZE_PT_LOCAL if s == None else s
+        s = PLT_KEYS.SIZE_PT_LOCAL if s is None else s
         if label == 'background':
             ax.scatter(
                 xs, ys, label = label,
@@ -215,8 +219,53 @@ def _draw_cells_withStaining(img, x, y, ax, cells, cell_source, **kwargs):
             else:
                 ax.scatter(
                     xs, ys,
-                    s = PLT_KEYS.SIZE_PT_LOCAL, color = 'gray', alpha = 0.25, **kwargs
+                    s = PLT_KEYS.SIZE_PT_LOCAL, color = '#DCDCDC', alpha = 0.25, **kwargs
                 )
+
+    ax.axis('off')
+    if cell_source == 'raw':
+        ax.set_title('Raw Cells')
+    elif cell_source == 'predicted':
+        ax.set_title('Predicted Cells')
+    else:
+        ax.set_title(cell_source)
+
+    return ax
+
+def _draw_cells_withStaining_convexhull(img, x, y, ax, cells, labels, label_to_col, cell_source, **kwargs):
+    # add image
+    xmin, xmax = x.min(), x.max()
+    ymin, ymax = y.min(), y.max()
+    if img is not None:
+        img = img[int(ymin):int(ymax), int(xmin):int(xmax)].copy()
+        ax.imshow(img, alpha = 1.0, cmap = 'gray')
+
+    x = x - xmin 
+    y = y - ymin
+    
+    # draw cell types
+    for label in np.unique(labels):
+        xs = x[np.where(labels == label)[0]]
+        ys = y[np.where(labels == label)[0]]
+        alpha = 1.0 if label not in  ['background', 'Unknown'] else 0.5
+        ax.scatter(
+            xs, ys,
+            s = PLT_KEYS.SIZE_PT_LOCAL, color = label_to_col[label], alpha = alpha, **kwargs
+        )
+    
+    # convex of cells
+    from scipy.spatial import ConvexHull
+    for cell in np.unique(cells):
+        if cell == -1:
+            continue
+        xs = x[np.where(cells == cell)[0]]
+        ys = y[np.where(cells == cell)[0]]
+        if len(xs) < SEG_KEYS.CELL_MIN_TRANSCRIPTS:
+            continue
+        else:
+            hull = ConvexHull(np.vstack([xs, ys]).T)
+            for simplex in hull.simplices:
+                ax.plot(xs[simplex], ys[simplex], color = 'black', linewidth = 0.5)
 
     ax.axis('off')
     if cell_source == 'raw':

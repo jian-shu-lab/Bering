@@ -8,6 +8,22 @@ from torch.nn import Linear
 from torch_geometric.nn import GCNConv, BatchNorm, MLP
 
 class GCN(nn.Module):
+    '''
+    Node classification Model with Graph Convolutional Networks (GCN) and Multilayer Perceptron (MLP).
+
+    Parameters
+    ----------
+    n_features
+        Number of input features
+    n_classes
+        Number of predicted classes
+    gcn_hidden_layer_dims
+        List of hidden layer dimensions for GCN
+    mlp_hidden_layer_dims
+        List of hidden layer dimensions for MLP
+    dropout_rate
+        Dropout rate
+    '''
     def __init__(
         self, 
         n_features: int, 
@@ -68,6 +84,9 @@ class GCN(nn.Module):
         # )
 
     def forward(self, data):
+        '''
+        Get the prediction of the model from the input data
+        '''
         x, edge_index, edge_weight = data.x, data.edge_index, data.edge_attr
 
         for i, layers in enumerate(self.gcn_layers):
@@ -89,6 +108,16 @@ class GCN(nn.Module):
 
     @torch.no_grad()
     def get_latent(self, data, num_mlp_layers = 1):
+        '''
+        Get the latent representation of the model from the input data
+
+        Parameters
+        ----------
+        data
+            Input data
+        num_mlp_layers
+            Number of MLP layers to use to get the latent representation
+        '''
         x, edge_index, edge_weight = data.x, data.edge_index, data.edge_attr
         for i, layers in enumerate(self.gcn_layers):
             for layer in layers:

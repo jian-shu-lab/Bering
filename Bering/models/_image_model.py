@@ -36,6 +36,20 @@ def spatial_pyramid_pool(previous_conv, num_sample, previous_conv_size, out_pool
     return spp
 
 class ImageEncoder(nn.Module):
+    '''
+    Convolutional neural network to learn representation from staining images of different sizes.
+
+    Parameters
+    ----------
+    image_dims
+        dimensions of the input image (n_samples x n_channels x W x H)
+    cnn_layer_dims
+        dimensions of CNN layers
+    mlp_layer_dim
+        dimensions of FC layers in the end
+    spp_output_size
+        size of spatial pyramid pooling. the total size of the spp layer in the dimension of input layer in FCN. Refer to :func:`~spatial_pyramid_pool`.
+    '''
     def __init__(
         self, 
         image_dims: Sequence[int], 
@@ -43,20 +57,7 @@ class ImageEncoder(nn.Module):
         mlp_layer_dims: Sequence[int] = [32, 32],
         spp_output_size: Sequence[int] = [4, 2, 1],
     ):
-        '''
-        Convolutional neural network to learn representation from staining images of different sizes.
 
-        Parameters
-        ----------
-        image_dims
-            dimensions of the input image (n_samples x n_channels x W x H)
-        cnn_layer_dims
-            dimensions of CNN layers
-        mlp_layer_dim
-            dimensions of FC layers in the end
-        spp_output_size
-            size of spatial pyramid pooling. the total size of the spp layer in the dimension of input layer in FCN
-        '''
         super().__init__()
 
         self.cnn_layer_dims = [image_dims[0]] + cnn_layer_dims

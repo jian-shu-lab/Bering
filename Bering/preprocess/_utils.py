@@ -4,7 +4,6 @@ from typing import Optional, Tuple, Union
 
 import cv2
 import numpy as np
-from kneed import KneeLocator
 from scipy import signal, sparse
 from tqdm import tqdm
 from typing_extensions import Literal
