@@ -1,6 +1,7 @@
 numpy
 pandas
 scanpy>=1.6.0
+seaborn
 matplotlib
 scipy
 sklearn
