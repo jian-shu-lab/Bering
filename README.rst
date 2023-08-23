@@ -1,7 +1,7 @@
 Bering - Spatial Segmentation and Cell Annotation in Python
 ================================================
 
-**Bering** is a tool for the molecular annotation and cell annotation in single-cell spatial transcriptomics data. It is based on the `_torch_geometric`_ package and uses the `scanpy`_ package for the analysis of single-cell transcriptomics data.
+**Bering** is a deep learning algorithm for simultaneous molecular annotation and cell segmentation in single-cell spatial transcriptomics data. 
 It builds on top of `torch_geometric`_ and `scanpy`_, from which it inherits modularity and scalability.
 It provides versatile models that leverages the spatial coordinates of the data, as well as pre-trained models across spatial technologies and tissues.
 
@@ -13,10 +13,10 @@ We will release our manuscript soon.
 
 Bering's key applications
 --------------------------
-- Identify background and real signals in noisy spatial data.
+- Identify background and real signals in noisy spatial transcriptomics data.
 - Identify cell annotations for transcripts on single-cell spatial data.
 - Efficiently cell segmentation with cell annotations.
-- Build and fine-tune pre-trained model.
+- Build and fine-tune pre-trained model on new data using transfer learning.
 
 Installation
 ------------
