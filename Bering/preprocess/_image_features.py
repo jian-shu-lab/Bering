@@ -1,7 +1,5 @@
 import numpy as np
 
-from skimage import feature, filters, measure
-
 from . import _utils as utils
 from ..objects import Bering_Graph as BrGraph
 from ._image_preprocessing import _normalize, _scale
