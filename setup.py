@@ -8,7 +8,7 @@ long_description = '\n\n'.join([open(os.path.join(base_dir,'README.rst'),'r').re
 
 setup(
     name = 'Bering',
-    version = '0.1.0',
+    version = '0.1.1',
     description = 'Bering: Transfer Learning of Cell Segmentation and Annotation for Spatial Omics',
     author = 'Kang Jin',
     author_email = 'jinkg@mail.uc.edu',
@@ -29,8 +29,7 @@ setup(
         'scikit-learn',
         'igraph',
         'leidenalg',
-        'torch',
-        'torch_sparse',
-        'torch_geometric==2.1.0.post1',
+        'torch==1.12.1',
+        'torch_geometric==2.3.1',
     ],
 )
