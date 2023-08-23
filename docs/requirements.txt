@@ -7,6 +7,6 @@ scipy
 scikit-learn
 igraph
 leidenalg
-torch
+torch==0.13.0
 torch_sparse
 torch_geometric==2.1.0.post1
