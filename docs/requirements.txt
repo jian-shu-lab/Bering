@@ -8,5 +8,5 @@ scikit-learn
 igraph
 leidenalg
 torch==0.13.0
-torch_sparse
+torch_sparse==0.6.15
 torch_geometric==2.1.0.post1
