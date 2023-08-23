@@ -9,7 +9,7 @@ Visit our `documentation`_ for installation, tutorials, examples and more.
 
 Manuscript
 ----------
-We will release our manuscript soon. 
+The manuscript has been submittet for peer review. A preprint will be released soon.
 
 Bering's key applications
 --------------------------
