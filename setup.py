@@ -26,7 +26,7 @@ setup(
         'scanpy>=1.6.0',
         'matplotlib',
         'scipy',
-        'sklearn',
+        'scikit-learn',
         'igraph',
         'leidenalg',
         'torch',
