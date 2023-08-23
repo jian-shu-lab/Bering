@@ -1,3 +1,5 @@
+|PyPI| |Docs|
+
 Bering - Spatial Segmentation and Cell Annotation in Python
 ================================================
 
@@ -28,12 +30,21 @@ or via Conda as::
 
     conda install -c conda-forge Bering
 
-Contributing to Bering
+Contact
 -----------------------
-We are happy about any contributions! Before you start, check out our `contributing guide <CONTRIBUTING.rst>`_.
+We are happy about any feedback! If you have any questions, please feel free to contact Kang.Jin@cchmc, zuobai.zhang@mila.quebec.
+Find more research in `Shu_Jian_Lab`_.
 
+.. |PyPI| image:: https://img.shields.io/pypi/v/squidpy.svg
+    :target: https://pypi.org/project/Bering/
+    :alt: PyPI
+
+.. |Docs| image:: https://img.shields.io/readthedocs/squidpy
+    :target: https://bering.readthedocs.io/en/latest/
+    :alt: Documentation
 
 .. _Palla, Spitzer et al. (2022): https://doi.org/10.1038/s41592-021-01358-2
 .. _scanpy: https://scanpy.readthedocs.io/en/stable/
 .. _torch_geometric: https://pytorch-geometric.readthedocs.io/en/latest/
-.. _documentation: https://celldrift.readthedocs.io/en/latest/index.html
+.. _documentation: https://bering.readthedocs.io/en/latest/
+.. _Shu_Jian_Lab: https://www.jianshulab.org/team
