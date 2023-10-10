@@ -9,7 +9,7 @@ from .._logger import LOGGING
 logger = LOGGING()
 
 def _get_cell_metadata(spots_seg):
-    segmented = spots_seg.groupby(['segmented']).median()[['x','y','z']]
+    segmented = spots_seg.groupby(['segmented'])[['x','y','z']].median()
     gapDF = spots_seg.groupby(['segmented'])[['x','y','z']].agg(np.ptp)
     
     segmented.columns = ['cx', 'cy', 'cz'] # centroid of x, y, z
