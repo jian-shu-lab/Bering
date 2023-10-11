@@ -29,8 +29,8 @@ class Metadata(ABC):
     def __post_init__(self) -> None:
         if self.doc_header is None:
             object.__setattr__(self, "doc_header", f"Download `{self.name.title().replace('_', ' ')}` data.")
-        # if self.path is None:
-        #     object.__setattr__(self, "path", os.path.expanduser(f"~/.cache/squidpy/{self.name}"))
+        if self.path is None:
+            object.__setattr__(self, "path", os.path.expanduser(f"~/.cache/Bering/{self.name}"))
 
     @property
     @abstractmethod
@@ -95,10 +95,6 @@ class Metadata(ABC):
 
         spots = self._download(fpath=fpath, backup_url=self.url, category = category, **kwargs)
 
-        # if self.shape is not None and data.shape != self.shape:
-        #     raise ValueError(f"Expected the data to have number of spots (seg, unseg) `{self.shape}`, found `{data.shape}`.")
-
-        # return data
         return spots
 
 
@@ -127,22 +123,17 @@ class AMetadata(Metadata):
                 Parameter("path", kind=Parameter.POSITIONAL_OR_KEYWORD, annotation=PathLike, default=None),
                 Parameter("kwargs", kind=Parameter.VAR_KEYWORD, annotation=Any),
             ],
-            # return_annotation=anndata.AnnData,
             return_annotation = DataFrame,
         )
 
     def _download(self, fpath: PathLike, backup_url: str, category: str = 'datasets', **kwargs: Any) -> Tuple[DataFrame, DataFrame]:
         kwargs.setdefault("keep_default_na", False)
-        # kwargs.setdefault("cache", True)
-        # kwargs.setdefault("sparse", True)
-        # kwargs.setdefault("cache", True)
 
         if category == 'datasets':
-            if fpath != 'None.tsv':
+            if os.path.isfile(fpath):
                 results = read_csv(fpath, sep = '\t', header = 0, index_col = 0, **kwargs)
             else:
                 results = read_csv(backup_url, sep = '\t', header = 0, index_col = 0, **kwargs)
-            # spots = read_csv(backup_url, sep = '\t', header = 0, index_col = 0, **kwargs)
         else:
             with open(backup_url, 'rb') as f:
                 results = pickle.load(f)
@@ -150,9 +141,7 @@ class AMetadata(Metadata):
 
     @property
     def _extension(self) -> str:
-        # return ".h5ad"
         return ".tsv"
-
 
 # class ImgMetadata(Metadata):
 #     """Metadata class for :class:`squidpy.im.ImageContainer`."""
