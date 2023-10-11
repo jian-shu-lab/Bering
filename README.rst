@@ -26,19 +26,9 @@ or via Conda as::
 
     conda install -c conda-forge Bering
 
-Citation
+Manuscript
 ----------
-@article {Jin2023.09.19.558548,
-	author = {Kang Jin and Zuobai Zhang and Ke Zhang and Francesca Viggiani and Claire Callahan and Jian Tang and Bruce J. Aronow and Jian Shu},
-	title = {Bering: joint cell segmentation and annotation for spatial transcriptomics with transferred graph embeddings},
-	elocation-id = {2023.09.19.558548},
-	year = {2023},
-	doi = {10.1101/2023.09.19.558548},
-	publisher = {Cold Spring Harbor Laboratory},
-	URL = {https://www.biorxiv.org/content/early/2023/09/22/2023.09.19.558548},
-	eprint = {https://www.biorxiv.org/content/early/2023/09/22/2023.09.19.558548.full.pdf},
-	journal = {bioRxiv}
-}
+Please refer to our manuscript `Jin, Zhang et al. (2023)`_ for more details.
 
 Contact
 -----------------------
@@ -57,7 +47,7 @@ Find more research in `Shu_Jian_Lab`_.
     :target: https://www.pepy.tech/projects/Bering
     :alt: Downloads
 
-.. _Palla, Spitzer et al. (2022): https://doi.org/10.1038/s41592-021-01358-2
+.. _Jin, Zhang et al. (2023): https://www.biorxiv.org/content/10.1101/2023.09.19.558548v1
 .. _scanpy: https://scanpy.readthedocs.io/en/stable/
 .. _torch_geometric: https://pytorch-geometric.readthedocs.io/en/latest/
 .. _documentation: https://bering.readthedocs.io/en/latest/
