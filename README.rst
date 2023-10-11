@@ -49,7 +49,7 @@ Find more research in `Shu_Jian_Lab`_.
     :target: https://pypi.org/project/Bering/
     :alt: PyPI
 
-.. |Docs| image:: https://img.shields.io/readthedocs/Bering
+.. |Docs| image:: https://img.shields.io/readthedocs/bering
     :target: https://bering.readthedocs.io/en/latest/
     :alt: Documentation
 
