@@ -23,13 +23,14 @@ setup(
     install_requires = [
         'numpy',
         'pandas',
+        'anndata>=0.8.0',
         'scanpy>=1.6.0',
         'matplotlib',
         'scipy',
         'scikit-learn',
         'igraph',
         'leidenalg',
-        'torch==1.12.1',
-        'torch_geometric==2.3.1',
+        'torch>=1.12.1',
+        'torch_geometric>=2.1.0',
     ],
 )
