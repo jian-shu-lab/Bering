@@ -14,7 +14,7 @@ tissue images if available.
 
 Manuscript
 ----------
-Please refer to our manuscript ([Jin, Zhang et al., 2023, bioRxiv](https://www.biorxiv.org/content/10.1101/2023.09.19.558548v1)) for more details.
+Please refer to our manuscript `Jin, Zhang et al.`_, 2023, bioRxiv for more details.
 
 Bering's key applications
 --------------------------
@@ -53,6 +53,7 @@ We are happy about any contributions! Before you start, check out our `contribut
 
 .. _scanpy: https://scanpy.readthedocs.io/en/stable/
 .. _torch_geometric: https://pytorch-geometric.readthedocs.io/en/latest/
-.. _contributing guide: https://github.com/KANG-BIOINFO
+.. _contributing guide: https://github.com/jian-shu-lab/Bering
 .. _discourse: https://github.com/jian-shu-lab/Bering/issues
+.. _Jin, Zhang et al.: https://www.biorxiv.org/content/10.1101/2023.09.19.558548v1
 .. _github: https://github.com/jian-shu-lab/Bering
