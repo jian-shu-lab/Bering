@@ -1,4 +1,4 @@
-|PyPI| |Docs|
+|PyPI| |Docs| |downloads|
 
 Bering - Spatial Segmentation and Cell Annotation in Python
 ================================================
@@ -8,10 +8,6 @@ It builds on top of `torch_geometric`_ and `scanpy`_, from which it inherits mod
 It provides versatile models that leverages the spatial coordinates of the data, as well as pre-trained models across spatial technologies and tissues.
 
 Visit our `documentation`_ for installation, tutorials, examples and more.
-
-Manuscript
-----------
-The manuscript has been submittet for peer review. A preprint will be released soon.
 
 Bering's key applications
 --------------------------
@@ -30,18 +26,36 @@ or via Conda as::
 
     conda install -c conda-forge Bering
 
+Citation
+----------
+@article {Jin2023.09.19.558548,
+	author = {Kang Jin and Zuobai Zhang and Ke Zhang and Francesca Viggiani and Claire Callahan and Jian Tang and Bruce J. Aronow and Jian Shu},
+	title = {Bering: joint cell segmentation and annotation for spatial transcriptomics with transferred graph embeddings},
+	elocation-id = {2023.09.19.558548},
+	year = {2023},
+	doi = {10.1101/2023.09.19.558548},
+	publisher = {Cold Spring Harbor Laboratory},
+	URL = {https://www.biorxiv.org/content/early/2023/09/22/2023.09.19.558548},
+	eprint = {https://www.biorxiv.org/content/early/2023/09/22/2023.09.19.558548.full.pdf},
+	journal = {bioRxiv}
+}
+
 Contact
 -----------------------
 We are happy about any feedback! If you have any questions, please feel free to contact Kang.Jin@cchmc, zuobai.zhang@mila.quebec.
 Find more research in `Shu_Jian_Lab`_.
 
-.. |PyPI| image:: https://img.shields.io/pypi/v/squidpy.svg
+.. |PyPI| image:: https://img.shields.io/pypi/v/Bering
     :target: https://pypi.org/project/Bering/
     :alt: PyPI
 
-.. |Docs| image:: https://img.shields.io/readthedocs/squidpy
+.. |Docs| image:: https://img.shields.io/readthedocs/Bering
     :target: https://bering.readthedocs.io/en/latest/
     :alt: Documentation
+
+.. |downloads| image:: https://img.shields.io/pepy/dt/Bering
+    :target: https://www.pepy.tech/projects/Bering
+    :alt: Downloads
 
 .. _Palla, Spitzer et al. (2022): https://doi.org/10.1038/s41592-021-01358-2
 .. _scanpy: https://scanpy.readthedocs.io/en/stable/
