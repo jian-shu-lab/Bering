@@ -1,4 +1,4 @@
-|PyPI| |Docs|
+|PyPI| |Docs| |downloads|
 
 Bering - Spatial Segmentation and Cell Annotation in Python
 ================================================
@@ -8,10 +8,6 @@ It builds on top of `torch_geometric`_ and `scanpy`_, from which it inherits mod
 It provides versatile models that leverages the spatial coordinates of the data, as well as pre-trained models across spatial technologies and tissues.
 
 Visit our `documentation`_ for installation, tutorials, examples and more.
-
-Manuscript
-----------
-The manuscript has been submittet for peer review. A preprint will be released soon.
 
 Bering's key applications
 --------------------------
@@ -30,20 +26,28 @@ or via Conda as::
 
     conda install -c conda-forge Bering
 
+Manuscript
+----------
+Please refer to our manuscript `Jin, Zhang et al. (2023)`_ for more details.
+
 Contact
 -----------------------
 We are happy about any feedback! If you have any questions, please feel free to contact Kang.Jin@cchmc, zuobai.zhang@mila.quebec.
 Find more research in `Shu_Jian_Lab`_.
 
-.. |PyPI| image:: https://img.shields.io/pypi/v/squidpy.svg
+.. |PyPI| image:: https://img.shields.io/pypi/v/Bering
     :target: https://pypi.org/project/Bering/
     :alt: PyPI
 
-.. |Docs| image:: https://img.shields.io/readthedocs/squidpy
+.. |Docs| image:: https://img.shields.io/readthedocs/bering
     :target: https://bering.readthedocs.io/en/latest/
     :alt: Documentation
 
-.. _Palla, Spitzer et al. (2022): https://doi.org/10.1038/s41592-021-01358-2
+.. |downloads| image:: https://img.shields.io/pepy/dt/Bering
+    :target: https://www.pepy.tech/projects/Bering
+    :alt: Downloads
+
+.. _Jin, Zhang et al. (2023): https://www.biorxiv.org/content/10.1101/2023.09.19.558548v1
 .. _scanpy: https://scanpy.readthedocs.io/en/stable/
 .. _torch_geometric: https://pytorch-geometric.readthedocs.io/en/latest/
 .. _documentation: https://bering.readthedocs.io/en/latest/
