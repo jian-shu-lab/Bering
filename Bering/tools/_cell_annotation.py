@@ -80,8 +80,8 @@ def _create_anndata(
     df_cells = pd.DataFrame(index = df_expr.index.values)
     df_cells['n_counts'] = np.sum(df_expr.values, axis = 1)
     df_cells['n_genes'] = np.sum(df_expr.values != 0, axis = 1)
-    df_cells['cx'] = pd.DataFrame(df_spots.groupby(['ensembled_cells']).mean()['x']).loc[df_cells.index.values, 'x'].values
-    df_cells['cy'] = pd.DataFrame(df_spots.groupby(['ensembled_cells']).mean()['y']).loc[df_cells.index.values, 'y'].values
+    df_cells['cx'] = pd.DataFrame(df_spots.groupby(['ensembled_cells'])['x'].mean()).loc[df_cells.index.values, 'x'].values
+    df_cells['cy'] = pd.DataFrame(df_spots.groupby(['ensembled_cells'])['y'].mean()).loc[df_cells.index.values, 'y'].values
     df_cells['predicted_labels'] = [label_dict[i] for i in df_cells.index.values]
 
     df_features = pd.DataFrame(index = df_expr.columns)
