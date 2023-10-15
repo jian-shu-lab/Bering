@@ -67,6 +67,7 @@ def _trainNode(
     early_stop: bool = True,
     early_stop_patience: int = 5,
     early_stop_min_delta: float = 0.025,
+    plotting: bool = False,
     plot_ax_size: float = 5.0,
 ):
     '''
@@ -77,7 +78,6 @@ def _trainNode(
     
     pbar = tqdm(range(epoches), desc = 'Training node classifier', colour='blue')
     epoch_interval = 5
-    plotting = False if is_notebook() else True
     
     for epoch in pbar:
         train_loss = trainer.update(train_loader) # loss function = CrossEntropy
@@ -111,6 +111,7 @@ def _trainEdge(
     early_stop: bool = True,
     early_stop_patience: int = 5,
     early_stop_min_delta: float = 0.025,
+    plotting: bool = False,
     plot_ax_size: float = 5.0,
 ):  
     '''
@@ -121,7 +122,6 @@ def _trainEdge(
 
     pbar = tqdm(range(epoches), desc = 'Training edge classifier', colour='red')
     epoch_interval = 5
-    plotting = False if is_notebook() else True
 
     for epoch in pbar:
         train_loss = trainer.update(train_loader, image) # loss function = CrossEntropy

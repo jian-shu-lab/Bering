@@ -33,6 +33,7 @@ def scatterplot(
     boundary_linewidth: float = 0.5,
     alpha_fg: float = 1.0,
     alpha_bg: float = 0.1,
+    return_figure: bool = False,
     savename: Optional[str] = None,
     ax: Optional[Axes] = None,
     ncols: int = 2,
@@ -73,7 +74,7 @@ def scatterplot(
                 and isinstance(color_by, cabc.Sequence)) \
             else 1
         )
-        num_panels_from_color_by = (
+        num_panels_from_source_annotation = (
             len(source_annotation) \
             if (not isinstance(source_annotation, str) \
                 and isinstance(source_annotation, cabc.Sequence)) \
@@ -83,7 +84,7 @@ def scatterplot(
             hspace = hspace,
             wspace = wspace,
             ncols = ncols,
-            num_panels = num_panels_from_color_by * num_panels_from_color_by,
+            num_panels = num_panels_from_color_by * num_panels_from_source_annotation,
             figsize = figsize,
             **panel_grid_kwargs,
         )
@@ -233,6 +234,8 @@ def scatterplot(
             **save_kwargs,
         )
 
+    if return_figure:
+        return fig
 
 def _get_values_groups(
     spots_all: pd.DataFrame,

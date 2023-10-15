@@ -43,7 +43,7 @@ def trainingplot(
         stages = list(stages)
 
     if metrics is None:
-        metrics = ['']
+        metrics = ['loss', 'accuracy', 'precision', 'auc']
     elif isinstance(metrics, str):
         metrics = [metrics]
     elif isinstance(metrics, cabc.Sequence):
@@ -148,10 +148,10 @@ def trainingplot(
         h, l = ax.get_legend_handles_labels()
         ax.legend(*zip(*sorted(zip(h, l), key=lambda t: t[1])))
 
-    if savefig is None:
-        return
-    else:
+    if savefig and figname is not None:
         fig.savefig(figname, bbox_inches = 'tight', dpi = 300)
+    else:
+        return
 
 def _panel_grid(
     num_panels, 
