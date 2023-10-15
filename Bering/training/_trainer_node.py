@@ -32,14 +32,18 @@ class TrainerNode(object):
         lr: float = TR_KEYS.LEARNING_RATE, 
         weight_decay: float = TR_KEYS.WEIGHT_DECAY,
         weight_seg: float = TR_KEYS.LOSS_WEIGHTS_SEGMENTED,
-        weight_bg: float = TR_KEYS.LOSS_WEIGHTS_BACKGROUND
+        weight_bg: float = TR_KEYS.LOSS_WEIGHTS_BACKGROUND,
+        device: Optional[str] = None,
     ):
         self.model = model
         self.lr = lr
         self.weight_decay = weight_decay
         self.optimizer = optim.Adam(self.model.parameters(), lr = lr, weight_decay = weight_decay)
         
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        if device is None:
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        else:
+            self.device = device
         self.model = self.model.to(self.device)
         self.model.double()
         self.weight_seg = weight_seg

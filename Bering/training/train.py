@@ -265,14 +265,14 @@ def Training(
         if not baseline:
             nodeclf = GCN(
                 n_features = bg.n_node_features, 
-                n_classes = bg.n_labels,
+                n_classes = bg.n_labels_raw,
                 gcn_hidden_layer_dims = node_gcnq_hidden_dims,
                 mlp_hidden_layer_dims = node_mlp_hidden_dims,
             )
         else:
             nodeclf = BaselineMLP(
                 n_features = bg.n_node_features,
-                n_classes = bg.n_labels,
+                n_classes = bg.n_labels_raw,
                 mlp_hidden_layer_dims = node_gcnq_hidden_dims[:-1] + node_mlp_hidden_dims,
             )
 

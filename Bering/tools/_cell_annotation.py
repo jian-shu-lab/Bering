@@ -27,7 +27,7 @@ def _ensemble_annotation(
     cells_1 = np.unique(df_abundance.loc[df_abundance['n_cells'] > min_transcripts, :].index.values)
 
     # get cell abundance 2
-    df_abundance = pd.DataFrame(df_spots.groupby(['predicted_cells', 'predicted_node_labels']).size())
+    df_abundance = pd.DataFrame(df_spots.groupby(['predicted_cells', 'predicted_labels']).size())
     df_abundance.columns = ['n_cells']
     df_abundance = df_abundance.sort_values(by = ['n_cells'], ascending = False)
     df_abundance.reset_index(inplace = True)
@@ -36,22 +36,22 @@ def _ensemble_annotation(
 
     # filter out qualified cells
     df_perc = (
-        df_spots.groupby("predicted_cells")["predicted_node_labels"]\
+        df_spots.groupby("predicted_cells")["predicted_labels"]\
             .apply(lambda x: x.value_counts(normalize=True).head(1))\
                 .mul(100)\
-                    .rename_axis(['predicted_cells','predicted_node_labels'])\
+                    .rename_axis(['predicted_cells','predicted_labels'])\
                         .reset_index(name='Perc')
     )
-    cells_3 = df_perc.loc[(df_perc['predicted_node_labels'] != 'background')&(df_perc['Perc'] >= min_dominant_ratio), 'predicted_cells'].values
+    cells_3 = df_perc.loc[(df_perc['predicted_labels'] != 'background')&(df_perc['Perc'] >= min_dominant_ratio), 'predicted_cells'].values
 
     qualified_cells = np.intersect1d(np.intersect1d(cells_1, cells_2), cells_3)
 
     df_perc.set_index('predicted_cells', inplace = True)
-    qualified_labels = df_perc.loc[qualified_cells, 'predicted_node_labels'].values
+    qualified_labels = df_perc.loc[qualified_cells, 'predicted_labels'].values
     label_dict = dict(zip(qualified_cells, qualified_labels))
 
-    all_labels = np.array(['Unknown'] * df_spots.shape[0], dtype = 'object')
-    all_cells = np.array([-1] * df_spots.shape[0])
+    all_labels = np.array(['background'] * df_spots.shape[0], dtype = 'object')
+    all_cells = np.array([0] * df_spots.shape[0])
     predicted_cells = df_spots['predicted_cells'].values
 
     for cell, label in zip(qualified_cells, qualified_labels):
@@ -62,7 +62,7 @@ def _ensemble_annotation(
     df_spots['ensembled_cells'] = all_cells
     df_spots['ensembled_labels'] = all_labels
 
-    bg.spots_predicted = df_spots.copy()
+    bg.spots_all = df_spots.copy()
 
     return df_spots, label_dict
 
@@ -74,7 +74,7 @@ def _create_anndata(
     Create anndata for segmented cells
     '''
     # ensembled annotations
-    df_spots = df_spots_all.loc[df_spots_all['ensembled_cells'] != -1, :].copy()
+    df_spots = df_spots_all.loc[df_spots_all['ensembled_cells'] != 0, :].copy()
     df_expr = df_spots.groupby(['ensembled_cells', 'features']).size().unstack(fill_value = 0)
     
     df_cells = pd.DataFrame(index = df_expr.index.values)

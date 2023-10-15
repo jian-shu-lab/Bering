@@ -113,9 +113,9 @@ def _get_classes(
     bg: BrGraph,
     df_spots: pd.DataFrame,
 ):  
-    Y = [bg.labels_dict[i] for i in df_spots['labels'].values]
+    Y = [bg.labels_dict[i] for i in df_spots['raw_labels'].values]
     Y = torch.LongTensor(Y)
-    Y = F.one_hot(Y, num_classes = bg.n_labels)
+    Y = F.one_hot(Y, num_classes = bg.n_labels_raw)
     return Y
 
 def _get_pos(
@@ -134,13 +134,16 @@ def _get_pos(
     '''
     x = df_spots.x.values
     y = df_spots.y.values
-    z = df_spots.z.values
+    try:
+        z = df_spots.z.values
+    except:
+        z = np.zeros(len(x), dtype = x.dtype)
     tps_names = df_spots.index.values
 
     # dist = df_spots['dist_to_centroid'].values 
     # ratio_dist = df_spots['ratio_dist_to_centroid'].values 
-    # cell_names = [cell_dict[i] if i in cell_dict.keys() else -1 for i in df_spots.segmented.values]
-    cell_names = df_spots.segmented.values
+    # cell_names = [cell_dict[i] if i in cell_dict.keys() else -1 for i in df_spots.raw_cells.values]
+    cell_names = df_spots.raw_cells.values
     pos = np.array([tps_names, x, y, z, cell_names]).T
     # pos = np.array([tps_names, x, y, cell_names, dist, ratio_dist]).T
     pos = torch.from_numpy(pos).double()

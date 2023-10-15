@@ -170,7 +170,7 @@ def Plot_Segmentation_Post(
         num_iters = n_iters,
     )[resolution]
     cells_pred[np.where(pred_labels != 'background')[0]] = cls_predlink
-    cells_pred[np.where(pred_labels == 'background')[0]] = -1
+    cells_pred[np.where(pred_labels == 'background')[0]] = 0
 
     x_raw, y_raw = df_window_raw.x.values, df_window_raw.y.values
     x_predfore, y_predfore = df_window_pred.x.values, df_window_pred.y.values

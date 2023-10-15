@@ -39,8 +39,8 @@ def cell_segmentation(
     '''
 
     # predicted_cells = np.array(['background'] * bg.spots_all.shape[0])
-    predicted_cells = np.array([-1] * bg.spots_all.shape[0])
-    foreground_indices = np.where(bg.spots_all['predicted_node_labels'].values != 'background')[0]
+    predicted_cells = np.array([0] * bg.spots_all.shape[0])
+    foreground_indices = np.where(bg.spots_all['predicted_labels'].values != 'background')[0]
     bg.foreground_indices = foreground_indices
     df_spots = bg.spots_all.iloc[foreground_indices, :].copy()
     if use_image and bg.image_raw is not None:
@@ -60,7 +60,6 @@ def cell_segmentation(
     )
     for k, v in clusters.items():
         predicted_cells[foreground_indices] = v
-        bg.spots_all[f'predicted_cells_resolution={k}'] = predicted_cells 
     bg.spots_all['predicted_cells'] = predicted_cells
     
     # return clusters

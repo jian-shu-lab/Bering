@@ -41,7 +41,7 @@ def _get_node_embedding_prediction_byTiling(bg, df_spots, num_chunks, n_neighbor
         z_all = torch.zeros((df_spots.shape[0], bg.trainer_node.model.mlp_layer_dims[-(bg.trainer_node.model.num_mlp_layers_remain+1)]), dtype = torch.double) # MLP
     
     logger.info(f'size of z_all: {z_all.shape}')
-    preds_logits = torch.zeros((df_spots.shape[0], bg.n_labels), dtype = torch.double)
+    preds_logits = torch.zeros((df_spots.shape[0], bg.n_labels_raw), dtype = torch.double)
 
     for i in range(num_chunks_axis):
         for j in range(num_chunks_axis):
@@ -74,7 +74,7 @@ def _get_node_embedding_prediction_byTiling(bg, df_spots, num_chunks, n_neighbor
             else:
                 z_section = torch.zeros((len(tile_indices), z_all.shape[1]), dtype = torch.double)
                 logger.info(f'size of z_section (2): {z_section.shape}')
-                preds_logits_section = torch.zeros((len(tile_indices), bg.n_labels), dtype = torch.double)
+                preds_logits_section = torch.zeros((len(tile_indices), bg.n_labels_raw), dtype = torch.double)
 
             # if i == 0 and j == 0:
             #     z_all = z_section
@@ -148,13 +148,13 @@ def node_classification(
     # prediction results
     max_probs, preds_logits = torch.max(preds_logits, dim = 1)
     back_indices = torch.where(max_probs <= prob_threshold)[0].unsqueeze(1)
-    preds_logits[back_indices] = bg.n_labels - 1
+    preds_logits[back_indices] = bg.n_labels_raw - 1
 
     preds_labels = np.array([bg.label_indices_dict[i.item()] for i in preds_logits])
-    bg.spots_all['predicted_node_labels'] = preds_labels
+    bg.spots_all['predicted_labels'] = preds_labels
     bg.spots_all['predicted_probability'] = max_probs.numpy()
 
-    bg.foreground_indices = np.where(bg.spots_all['predicted_node_labels'].values != 'background')[0]
+    bg.foreground_indices = np.where(bg.spots_all['predicted_labels'].values != 'background')[0]
 
     # output results
     return preds_labels, graph_all

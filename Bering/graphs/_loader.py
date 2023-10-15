@@ -73,8 +73,8 @@ def BuildWindowGraphs(
 
     # select cells and find attributes
     selected_cells = []
-    cell_meta = bg.segmented.copy()
-    labels = np.setdiff1d(cell_meta.labels.unique(), ['background'])
+    cell_meta = bg.raw_cell_metadata.copy()
+    labels = np.setdiff1d(cell_meta.raw_labels.unique(), ['background'])
 
     cx_min, cx_max = np.percentile(cell_meta['cx'].values, cell_percentile_from_border), np.percentile(cell_meta['cx'].values, 100 - cell_percentile_from_border)
     cy_min, cy_max = np.percentile(cell_meta['cy'].values, cell_percentile_from_border), np.percentile(cell_meta['cy'].values, 100 - cell_percentile_from_border)
@@ -82,12 +82,12 @@ def BuildWindowGraphs(
     cell_meta = cell_meta.loc[(cell_meta['cx'] > cx_min) & (cell_meta['cx'] < cx_max) & (cell_meta['cy'] > cy_min) & (cell_meta['cy'] < cy_max), :].copy() # remove cells in border
     
     for label in labels:
-        cells = cell_meta.loc[cell_meta['labels'] == label, :].index.values
+        cells = cell_meta.loc[cell_meta['raw_labels'] == label, :].index.values
         selected_cells += random.sample(list(cells), min(n_cells_perClass, len(cells)))
 
     counts = 0
     for cell_idx, cell in enumerate(selected_cells):
-        cx, cy, cz, d = bg.segmented.loc[cell, 'cx'], bg.segmented.loc[cell, 'cy'], bg.segmented.loc[cell, 'cz'], bg.segmented.loc[cell, 'd']
+        cx, cy, cz, d = bg.raw_cell_metadata.loc[cell, 'cx'], bg.raw_cell_metadata.loc[cell, 'cy'], bg.raw_cell_metadata.loc[cell, 'cz'], bg.raw_cell_metadata.loc[cell, 'd']
 
         if n_windows_per_cell == 1:
             xc_list = [cx]
@@ -116,13 +116,13 @@ def BuildWindowGraphs(
             if window_spots.shape[0] == 0:
                 continue
             
-            spots_abun = pd.DataFrame(window_spots.groupby(['segmented']).size(), columns = ['counts'])
+            spots_abun = pd.DataFrame(window_spots.groupby(['raw_cells']).size(), columns = ['counts'])
             spots_abun.sort_values(by = ['counts'], ascending = False, inplace = True)
             if spots_abun.shape[0] == 1 or spots_abun.iloc[1,0] < min_spots_outside:
                 continue
 
-            window_seg = window_spots.loc[window_spots['groups'] == 'segmented', :].copy()
-            window_unseg = window_spots.loc[window_spots['groups'] == 'unsegmented', :].copy()
+            window_seg = window_spots.loc[window_spots['raw_groups'] == 'foreground', :].copy()
+            window_unseg = window_spots.loc[window_spots['raw_groups'] == 'background', :].copy()
             ratio_unseg = window_unseg.shape[0] / (window_unseg.shape[0] + window_seg.shape[0])
 
             if ratio_unseg >= max_unsegmented_thresh:

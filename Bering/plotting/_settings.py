@@ -20,7 +20,7 @@ def _PLOT_SETTINGS():
     mpl.rcParams['ps.fonttype'] = 42
     mpl.rcParams['font.family'] = 'Arial'
     mpl.rcParams.update({'font.size': 18})
-    plt.style.use('dark_background')
+    # plt.style.use('dark_background')
 
 def _GET_CMAPS():
     cmap = []

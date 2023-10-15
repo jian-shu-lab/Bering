@@ -174,6 +174,7 @@ def _run_leiden(
         resolution_parameter = resolution
     )
     clusters = partition.membership
+    clusters = [i+1 for i in clusters]
     return clusters
 
 def _get_edge_chunks_random(edges_whole, num_chunks):

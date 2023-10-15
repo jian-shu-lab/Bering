@@ -317,7 +317,7 @@ def Plot_Segmentation(
         num_iters = n_iters,
     )[resolution]
     cells_pred[np.where(predictions != bg.n_labels - 1)[0]] = cls_predlink
-    cells_pred[np.where(predictions == bg.n_labels - 1)[0]] = -1
+    cells_pred[np.where(predictions == bg.n_labels - 1)[0]] = 0
     
     # get labels
     raw_labels = df_window_raw.labels.values

@@ -206,7 +206,7 @@ def _draw_cells_withStaining(img, x, y, ax, cells, cell_source, **kwargs):
         if len(xs) < SEG_KEYS.CELL_MIN_TRANSCRIPTS:
             continue
         else:
-            if cell != -1:
+            if cell != 0:
                 c_index += 1
                 cx = np.mean(xs)
                 cy = np.mean(ys)
@@ -256,7 +256,7 @@ def _draw_cells_withStaining_convexhull(img, x, y, ax, cells, labels, label_to_c
     # convex of cells
     from scipy.spatial import ConvexHull
     for cell in np.unique(cells):
-        if cell == -1:
+        if cell == 0:
             continue
         xs = x[np.where(cells == cell)[0]]
         ys = y[np.where(cells == cell)[0]]

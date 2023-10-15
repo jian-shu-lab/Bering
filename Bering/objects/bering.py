@@ -5,37 +5,36 @@ from typing import Optional, Sequence
 from sklearn.neighbors import kneighbors_graph
 
 from .._logger import LOGGING
-
 logger = LOGGING()
 
 def _get_cell_metadata(spots_seg):
-    segmented = spots_seg.groupby(['segmented'])[['x','y','z']].median()
-    gapDF = spots_seg.groupby(['segmented'])[['x','y','z']].agg(np.ptp)
+    raw_cell_metadata = spots_seg.groupby(['raw_cells'])[['x','y','z']].median()
+    gapDF = spots_seg.groupby(['raw_cells'])[['x','y','z']].agg(np.ptp)
     
-    segmented.columns = ['cx', 'cy', 'cz'] # centroid of x, y, z
+    raw_cell_metadata.columns = ['cx', 'cy', 'cz'] # centroid of x, y, z
     gapDF.columns = ['dx', 'dy', 'dz'] # diameter of x,y,z
     
-    segmented = pd.concat(
-        [segmented, gapDF], axis = 1
+    raw_cell_metadata = pd.concat(
+        [raw_cell_metadata, gapDF], axis = 1
     )
-    segmented['d'] = [
-        max(i,j,k) for (i,j,k) in zip(segmented.dx.values, segmented.dy.values, segmented.dz.values)
+    raw_cell_metadata['d'] = [
+        max(i,j,k) for (i,j,k) in zip(raw_cell_metadata.dx.values, raw_cell_metadata.dy.values, raw_cell_metadata.dz.values)
     ] 
-    segmented = segmented.loc[(segmented['dx'] != 0) & (segmented['dy'] != 0), :].copy() # delete empty seg
+    raw_cell_metadata = raw_cell_metadata.loc[(raw_cell_metadata['dx'] != 0) & (raw_cell_metadata['dy'] != 0), :].copy() # delete empty seg
     
-    cell_meta = spots_seg.drop_duplicates(subset = ['segmented', 'labels'])
-    cell_meta.set_index('segmented', inplace = True)
-    segmented['labels'] = cell_meta.loc[segmented.index.values, 'labels'].values
-    return segmented
+    cell_meta = spots_seg.drop_duplicates(subset = ['raw_cells', 'raw_labels'])
+    cell_meta.set_index('raw_cells', inplace = True)
+    raw_cell_metadata['raw_labels'] = cell_meta.loc[raw_cell_metadata.index.values, 'raw_labels'].values
+    return raw_cell_metadata
 
 def _reindex_cell_ids(df_spots_seg):
     '''
-    Index cell ids from 0 to n_cells
+    Index cell ids from 1 to n_cells (0 as the background)
     '''
-    cell_ids = df_spots_seg['segmented'].unique()
-    cell_ids_dict = dict(zip(cell_ids, np.arange(len(cell_ids))))
+    cell_ids = df_spots_seg['raw_cells'].unique()
+    cell_ids_dict = dict(zip(cell_ids, np.arange(1, len(cell_ids) + 1)))
 
-    df_spots_seg['segmented'] = df_spots_seg['segmented'].map(cell_ids_dict)
+    df_spots_seg['raw_cells'] = df_spots_seg['raw_cells'].map(cell_ids_dict)
     return df_spots_seg
 
 def _normalize(image):
@@ -80,7 +79,7 @@ class Bering_Graph():
         image: np.ndarray = None,
         channels: Optional[Sequence[str]] = None,
         use_features: Optional[Sequence[str]] = None,
-        required_features: Optional[Sequence[str]] = ['x', 'y', 'features', 'segmented', 'labels'],
+        required_features: Optional[Sequence[str]] = ['x', 'y', 'features', 'raw_cells', 'raw_labels'],
         dimension_3d: bool = False,
     ):
         # store spots
@@ -88,7 +87,7 @@ class Bering_Graph():
         if self.dimension == '3d' and 'z' not in df_spots_seg.columns:
             raise ValueError("3D spots must contain 'z' coordinate")
         
-        cols_unseg = [col for col in df_spots_unseg.columns if col not in ['segmented', 'labels']]
+        cols_unseg = [col for col in df_spots_unseg.columns if col not in ['raw_cells', 'raw_labels']]
         df_spots_unseg = df_spots_unseg.loc[:, cols_unseg].copy()
 
         self.spots_seg = df_spots_seg.copy()
@@ -97,10 +96,10 @@ class Bering_Graph():
         if self.spots_seg.shape[0] != 0:
             self.spots_seg = _reindex_cell_ids(self.spots_seg) # reindex cell ids from 0 to n_cells
 
-        self.spots_seg['groups'] = 'segmented'
-        self.spots_unseg['segmented'] = -1
-        self.spots_unseg['groups'] = 'unsegmented'
-        self.spots_unseg['labels'] = 'background'
+        self.spots_seg['raw_groups'] = 'foreground'
+        self.spots_unseg['raw_cells'] = 0
+        self.spots_unseg['raw_labels'] = 'background'
+        self.spots_unseg['raw_groups'] = 'background'
 
         self.spots_all = pd.concat(
             [self.spots_seg, self.spots_unseg], axis = 0
@@ -117,28 +116,28 @@ class Bering_Graph():
 
         # registration of segmented samples
         if self.spots_seg.shape[0] != 0:
-            self.segmented = _get_cell_metadata(self.spots_seg)
-            self.n_segmented = len(self.spots_seg.segmented.unique())
-            self.samples = self.spots_seg['segmented'].unique()
+            self.raw_cell_metadata = _get_cell_metadata(self.spots_seg)
+            self.n_cells_raw = len(self.spots_seg.raw_cells.unique())
+            self.raw_cells = self.spots_seg['raw_cells'].unique()
         else:
-            self.segmented = pd.DataFrame()
-            self.n_segmented = 0
-            self.samples = np.array([])
+            self.raw_cell_metadata = pd.DataFrame()
+            self.n_cells_raw = 0
+            self.raw_cells = np.array([])
 
         # labels
         if self.spots_seg.shape[0] != 0:
-            self.labels = self.spots_all['labels'].unique()
-            self.labels = np.append(
-                np.setdiff1d(self.labels, 'background'), 
+            self.raw_labels = self.spots_all['raw_labels'].unique()
+            self.raw_labels = np.append(
+                np.setdiff1d(self.raw_labels, 'background'), 
                 'background'
             ) # UNSEGMENTED as the last one
-            self.n_labels = len(self.labels)
+            self.n_labels_raw = len(self.raw_labels)
         else:
-            self.labels = np.array(['background'])
-            self.n_labels = 1
+            self.raw_labels = np.array(['background'])
+            self.n_labels_raw = 1
         
-        self.labels_dict = dict(zip(self.labels, range(self.n_labels)))
-        self.label_indices_dict = dict(zip(range(self.n_labels), self.labels))
+        self.labels_dict = dict(zip(self.raw_labels, range(self.n_labels_raw)))
+        self.label_indices_dict = dict(zip(range(self.n_labels_raw), self.raw_labels))
         self.label_to_col = {}
 
         # registration of features
@@ -188,15 +187,17 @@ class Bering_Graph():
             self.n_channels = len(channels)
             self.add_image_features(normalize=True)
 
+        del self.spots_seg
+        del self.spots_unseg
         # logging
         if self.dimension == '3d':
             logger.info(f'min x: {self.XMIN}, min y: {self.YMIN}, max x: {self.XMAX}, max y: {self.YMAX}, min z: {self.ZMIN}, max z: {self.ZMAX}')
         else:
             logger.info(f'min x: {self.XMIN}, min y: {self.YMIN}, max x: {self.XMAX}, max y: {self.YMAX}')
-        logger.info(f'Numbers of segmented cell = {self.n_segmented}; labels = {self.n_labels}; features = {self.n_features}')
+        logger.info(f'Numbers of segmented cell = {self.n_cells_raw}; labels = {self.n_labels_raw}; features = {self.n_features}')
         logger.info(f'Label indices dictionary is {self.label_indices_dict}')
-        for label in np.setdiff1d(self.labels, ['background']):
-            num_cells = len(np.where(self.segmented['labels'].values == label)[0])
+        for label in np.setdiff1d(self.raw_labels, ['background']):
+            num_cells = len(np.where(self.raw_cell_metadata['raw_labels'].values == label)[0])
             logger.info(f'Number of cells for {label}: {num_cells}')
 
     def use_settings(self, bg2):
@@ -214,9 +215,9 @@ class Bering_Graph():
         self.features = bg2.features
         self.labels_dict = bg2.labels_dict
         self.label_indices_dict = bg2.label_indices_dict
-        self.n_labels = bg2.n_labels
-        new_labels = np.setdiff1d(self.labels, bg2.labels)
-        self.labels = bg2.labels
+        self.n_labels = bg2.n_labels_raw
+        new_labels = np.setdiff1d(self.raw_labels, bg2.raw_labels)
+        self.raw_labels = bg2.raw_labels
         self.label_to_col = bg2.label_to_col
         for new_label in new_labels:
             self.label_to_col[new_label] = np.random.rand(3)
@@ -260,5 +261,3 @@ class Bering_Graph():
                 spots[channel] = img_channel[yr, xr]
         
         self.spots_all = spots.copy()
-        self.spots_seg = spots.loc[spots['groups'] == 'segmented', :].copy()
-        self.spots_unseg = spots.loc[spots['groups'] == 'unsegmented', :].copy()

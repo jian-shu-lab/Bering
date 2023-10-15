@@ -33,5 +33,3 @@ def add_image_features(
         spots[channel] = img_channel[yr, xr]
     
     bg.spots_all = spots.copy()
-    bg.spots_seg = spots.loc[spots['groups'] == 'segmented', :].copy()
-    bg.spots_unseg = spots.loc[spots['groups'] == 'unsegmented', :].copy()

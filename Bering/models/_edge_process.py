@@ -61,8 +61,9 @@ def _sample_edges(
     # get all labels
     srcs = edges[0]; dsts = edges[1]
 
-    pos_edge_index = edges[:, torch.where((cells[srcs] == cells[dsts]) & (cells[srcs] != -1) & (cells[dsts] != -1))[0]]
-    neg_edge_index = edges[:, torch.where((cells[srcs] != cells[dsts]) & (cells[srcs] != -1) & (cells[dsts] != -1))[0]]
+    cell_bg = 0 # unsegmented cell assignment
+    pos_edge_index = edges[:, torch.where((cells[srcs] == cells[dsts]) & (cells[srcs] != cell_bg) & (cells[dsts] != cell_bg))[0]]
+    neg_edge_index = edges[:, torch.where((cells[srcs] != cells[dsts]) & (cells[srcs] != cell_bg) & (cells[dsts] != cell_bg))[0]]
 
     # ensure equal number of pos / neg edges
     num_min_edges = min(pos_edge_index.shape[1], neg_edge_index.shape[1])
