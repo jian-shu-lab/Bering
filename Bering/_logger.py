@@ -3,7 +3,8 @@ import logging
 import datetime
 
 def LOGGING():
-    if not os.path.isdir('logging'): {os.mkdir('logging')}
+    if not os.path.isdir('logging'):
+        os.mkdir('logging')
     logging.basicConfig(
         filemode = 'w+', 
         level = logging.INFO, 

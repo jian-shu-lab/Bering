@@ -7,6 +7,6 @@ from ._plot_elements import _draw_cells_withStaining
 from .scatterplots import scatterplot
 from .trainplots import trainingplot
 
-FOLDER = PLOT_KEYS.FOLDER_NAME
-if not os.path.isdir(FOLDER):
-    os.mkdir(FOLDER)
+# FOLDER = PLOT_KEYS.FOLDER_NAME
+# if not os.path.isdir(FOLDER):
+#     os.mkdir(FOLDER)

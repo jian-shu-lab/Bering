@@ -14,9 +14,6 @@ from matplotlib import rcParams
 from matplotlib import gridspec
 import matplotlib.pyplot as plt 
 
-if not os.path.isdir('plots'):
-    os.mkdir('plots')
-
 warnings.filterwarnings('ignore')
 
 def scatterplot(

@@ -86,7 +86,7 @@ def _trainNode(
             break
         if (epoch % epoch_interval == 0) or epoch == (epoches - 1):
             if epoch == (epoches - 1):
-                plotting = True
+                plotting = False
             record(
                 trainer, 
                 None,
@@ -130,7 +130,7 @@ def _trainEdge(
             break
         if (epoch % epoch_interval == 0) or epoch == (epoches - 1):
             if epoch == (epoches - 1):
-                plotting = True
+                plotting = False
             _, auc_test, _, prec_test, _, _ = record(
                 trainer, 
                 image,

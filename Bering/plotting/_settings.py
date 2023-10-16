@@ -13,8 +13,8 @@ def _CREATE_CMAP(cmap_name, cmap_list):
     return cmap_list
 
 def _PLOT_SETTINGS():
-    if not os.path.isdir('figures'):
-        os.mkdir('figures')
+    # if not os.path.isdir('figures'):
+    #     os.mkdir('figures')
 
     mpl.rcParams['pdf.fonttype'] = 42
     mpl.rcParams['ps.fonttype'] = 42
