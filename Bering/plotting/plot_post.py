@@ -34,8 +34,8 @@ def _get_extended_window(spots, location, window_width = 50.0, window_height = 5
     loc_x, loc_y = location
     minx, miny = loc_x - window_width, loc_y - window_height
     maxx, maxy = loc_x + window_width, loc_y + window_height
-    logger.info(f'loc_x, loc_y: {loc_x}, {loc_y}')
-    logger.info(f'minx, miny, maxx, maxy: {minx}, {miny}, {maxx}, {maxy}')
+    logger.info(f'\tloc_x, loc_y: {loc_x}, {loc_y}')
+    logger.info(f'\tminx, miny, maxx, maxy: {minx}, {miny}, {maxx}, {maxy}')
 
     window_spots = spots.loc[(spots['x'] > minx) & (spots['x'] < maxx) & (spots['y'] > miny) & (spots['y'] < maxy), :].copy()
     return window_spots
@@ -43,7 +43,6 @@ def _get_extended_window(spots, location, window_width = 50.0, window_height = 5
 def _get_graph(bg, location, Spots, n_neighbors = 10, window_size = 50.0):
     # get spots in window
     window_spots = _get_extended_window(Spots.copy(), location, window_size, window_size)
-    # logger.info(f'window size for location {location} is {window_size.shape}')
 
     # build neighbor graph
     try:

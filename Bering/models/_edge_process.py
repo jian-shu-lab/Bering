@@ -69,9 +69,9 @@ def _sample_edges(
     num_min_edges = min(pos_edge_index.shape[1], neg_edge_index.shape[1])
     num_pos_edges = min(num_min_edges, num_pos_edges)
     num_neg_edges = min(num_min_edges, num_neg_edges)
-    logger.info(
-        f'Numer of total positive edges: {pos_edge_index.shape[1]}; negative edges: {neg_edge_index.shape[1]}; final edges for pos/neg types: {num_pos_edges}, {num_neg_edges}'
-    )
+    # logger.info(
+    #     f'\tNumer of total positive edges: {pos_edge_index.shape[1]}; negative edges: {neg_edge_index.shape[1]}; final edges for pos/neg types: {num_pos_edges}, {num_neg_edges}'
+    # )
 
     # format pos/neg edges
     pos_edge_index = pos_edge_index[:, torch.randint(0, pos_edge_index.shape[1], (num_pos_edges,), dtype = torch.long)]

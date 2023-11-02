@@ -2,10 +2,12 @@ import igraph
 import logging
 import numpy as np
 import pandas as pd
+from typing import Optional, List
 
 import leidenalg as la
 from scipy.sparse import coo_matrix
 from sklearn.neighbors import kneighbors_graph
+from sklearn.metrics import adjusted_mutual_info_score
 
 import torch
 import torch.nn.functional as F 
@@ -66,20 +68,20 @@ def _get_edge_embedding(
         image_graph, src_coords, dst_coords = _get_image_graph(pos, image, src_coords, dst_coords)
         image_graph = trainer.model.encoder_image.get_conv2d_embedding(image_graph)
         t1 = time.time()
-        logger.info(f'---Get image graph time: {(t1-t0):.5f} s. Number of edges: {src_coords.shape[0]}')
+        logger.info(f'\tGet image graph time: {(t1-t0):.5f} s. Number of edges: {src_coords.shape[0]}')
         
         # binning coordinates
         minx, maxx, miny, maxy, avail_bins, dist_bins_2d = _get_binned_coordinates(
             src_coords, dst_coords, trainer.model.image_binsize, trainer.model.min_image_size, trainer.model.max_image_size
         )
         t2 = time.time()
-        logger.info(f'---Get all binned coordinates time: {(t2-t1):.5f} s')
+        logger.info(f'\tGet all binned coordinates time: {(t2-t1):.5f} s')
 
         # run the model for eachedge
         edge_attr_image = torch.empty((src_coords.shape[0], trainer.model.n_image_features)).double().cuda()
         for avail_bin in avail_bins:
             bin_indices = torch.where((dist_bins_2d == avail_bin).all(dim=1))[0]
-            logger.info(f'---Number of edges in bin {avail_bin}: {len(bin_indices)}')
+            logger.info(f'\tNumber of edges in bin {avail_bin}: {len(bin_indices)}')
             subimages = []
             _max_subplots_perRound = int(min(5*1024*1024*1024/(2048*avail_bin[0]*avail_bin[1]), max_subplots_perRound)) # no larger than 5BG
             if len(bin_indices) < _max_subplots_perRound:
@@ -100,7 +102,7 @@ def _get_edge_embedding(
                     edge_attr_image_bin = trainer.model.encoder_image(subimages)
                     edge_attr_image[bin_indices[i:i+_max_subplots_perRound], :] = edge_attr_image_bin
         t3 = time.time()
-        logger.info(f'---Get all image embeddings time: {(t3-t2):.5f} s')
+        logger.info(f'\tGet all image embeddings time: {(t3-t2):.5f} s')
 
         edge_attr_image = edge_attr_image.cpu()
         edge_attr = torch.cat([edge_attr, edge_attr_image], dim = -1)
@@ -141,9 +143,9 @@ def _create_adjacency_matrix(
     n_pos = len(pos_edges)
     n_neg = len(neg_edges)
     total = pred_prob.shape[0]
-    logger.info(f'Total Number of nodes: {N_nodes}; Total number of edges: {total}; Prediction Probability Range: {(np.min(pred_prob)):.3f} ~ {(np.max(pred_prob)):.3f}')
-    logger.info(f'  Positive edge (prob >= {pos_thresh:.3f}) ratio: {(n_pos / total):.3f}')
-    logger.info(f'  Negative edge (prob < {neg_thresh:.3f}) ratio: {(n_neg / total):.3f}')
+    logger.info(f'\tTotal Number of nodes: {N_nodes}; Total number of edges: {total}; \n\tPrediction Probability Range: {(np.min(pred_prob)):.3f} ~ {(np.max(pred_prob)):.3f}')
+    logger.info(f'\tPositive edge (prob >= {pos_thresh:.3f}) ratio: {(n_pos / total):.3f}')
+    logger.info(f'\tNegative edge (prob < {neg_thresh:.3f}) ratio: {(n_neg / total):.3f}')
 
     pos_edge_indices = edge_indices[pos_edges]
     neg_edge_indices = edge_indices[neg_edges]
@@ -176,6 +178,28 @@ def _run_leiden(
     clusters = partition.membership
     clusters = [i+1 for i in clusters]
     return clusters
+
+def _find_best_resolution(
+    df_spots,
+    clusters,
+):
+    '''
+    Find the best resolution for clustering using NMI
+    '''
+    n_original_cells = len(np.unique(df_spots['raw_cells'].values)) - 1
+    fg_indices = np.where(df_spots['raw_cells'].values != 0)[0]
+
+    bias_best = 1000
+    for res, cluster in clusters.items():
+        query_cells = np.array(cluster)[fg_indices]
+        n_clusters = len(np.unique(query_cells))
+        
+        bias = np.abs(n_clusters - n_original_cells) / n_original_cells
+        if bias < bias_best:
+            bias_best = bias
+            res_best = res
+
+    return res_best, bias_best
 
 def _get_edge_chunks_random(edges_whole, num_chunks):
     '''
@@ -220,8 +244,9 @@ def run_leiden_predictedLink(
     use_image: bool = True,
     pos_thresh: float = 0.6,
     neg_thresh: float = 0.5,
-    resolution: float = 1e-2,
-    num_edges_perSpot: int = 1000,
+    resolutions: Optional[List[float]] = None,
+    num_edges_perSpot: Optional[int] = None,
+    max_diameter_ratio: float = 1.0,
     n_neighbors: int = 10,
     num_iters: int = 10,
     split_edges_byTiling: bool = False,
@@ -235,21 +260,30 @@ def run_leiden_predictedLink(
         coords = np.array([x, y, z]).T
     N_nodes = df_spots.shape[0]
 
-    A = kneighbors_graph(coords, num_edges_perSpot, mode = 'connectivity', include_self = False)
+    # A = kneighbors_graph(coords, num_edges_perSpot, mode = 'connectivity', include_self = False)
+    median_diameter = np.median(bg.raw_cell_metadata['d'].values)
+    max_diameter = max_diameter_ratio * median_diameter
+
+    median_n_counts_per_cell = np.sum(bg.spots_all['raw_cells'].values != 0) / bg.n_cells_raw
+    if num_edges_perSpot is None:
+        num_edges_perSpot = int(median_n_counts_per_cell)
+    A = kneighbors_graph(coords, num_edges_perSpot, mode = 'distance', include_self = False)
+
     A = coo_matrix(A)
-    row, col = A.row, A.col
+    row, col, dist = A.row, A.col, A.data
+    row, col = row[dist <= max_diameter], col[dist <= max_diameter] # limiting max diameter
     edges_whole = torch.from_numpy(np.array([row, col]).T).long()
-    logger.info(f'Total number of edges for segmentation task is {edges_whole.shape[0]}')
+    logger.info(f'\tTotal number of edges for segmentation task is {edges_whole.shape[0]}')
 
     # chunk edges
-    logger.info(f'Split edges into chunks, number of chunks: {num_iters}')
+    logger.info(f'\tSplit edges into chunks, number of chunks: {num_iters}')
     if split_edges_byTiling == False:
         edges_whole_sections = _get_edge_chunks_random(edges_whole, num_iters)
     else:
         edges_whole_sections, num_iters = _get_edge_chunks_byTiling(edges_whole, num_iters, x, y)
     
     # prepare graph and node embeddings
-    logger.info(f'Prepare graph and node embeddings')
+    logger.info(f'\tPrepare graph and node embeddings')
     if (not hasattr(bg, 'graph_all')) and (not hasattr(bg, 'z_all')):
         graph_whole = BuildGraph_fromRaw(bg, df_spots.copy(), bg.features.copy(), n_neighbors = n_neighbors).cpu()
         pos_whole = graph_whole.pos
@@ -273,9 +307,10 @@ def run_leiden_predictedLink(
         image_ = None
 
     # run for each chunk
-    logger.info(f'Total number of iterations is {num_iters}')
+    logger.info(f'\tTotal number of iterations is {num_iters}')
     for iter in range(num_iters):
-        logger.info(f'Iteration {iter + 1} of {num_iters} is running')
+        if iter % 10 == 0:
+            logger.info(f'\tIteration {iter + 1} of {num_iters} is running')
         edges_iter = edges_whole_sections[iter]
 
         if edges_iter.shape[0] > 0:
@@ -301,12 +336,17 @@ def run_leiden_predictedLink(
 
     # clustering across resolutions
     clusters = {}
-    if not isinstance(resolution, list):
-        resolution = [resolution]
-    for res in resolution:
+    if not isinstance(resolutions, list):
+        raise ValueError('resolution must be a list')
+    for res in resolutions:
         if res < 0:
             raise ValueError('resolution must be non-negative')
         else:
             clusters[res] = _run_leiden(g, res)
 
-    return clusters
+    # find the best resolution
+    res_best, AMI_best = _find_best_resolution(df_spots.copy(), clusters)
+    cluster = clusters[res_best]
+    bg.resolution = res_best
+
+    return cluster

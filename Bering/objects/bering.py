@@ -82,6 +82,7 @@ class Bering_Graph():
         required_features: Optional[Sequence[str]] = ['x', 'y', 'features', 'raw_cells', 'raw_labels'],
         dimension_3d: bool = False,
     ):
+        logger.info('Building Bering Object ...')
         # store spots
         self.dimension = '3d' if dimension_3d else '2d'
         if self.dimension == '3d' and 'z' not in df_spots_seg.columns:
@@ -191,14 +192,14 @@ class Bering_Graph():
         del self.spots_unseg
         # logging
         if self.dimension == '3d':
-            logger.info(f'min x: {self.XMIN}, min y: {self.YMIN}, max x: {self.XMAX}, max y: {self.YMAX}, min z: {self.ZMIN}, max z: {self.ZMAX}')
+            logger.info(f'\tmin x: {self.XMIN}, min y: {self.YMIN}, max x: {self.XMAX}, max y: {self.YMAX}, min z: {self.ZMIN}, max z: {self.ZMAX}')
         else:
-            logger.info(f'min x: {self.XMIN}, min y: {self.YMIN}, max x: {self.XMAX}, max y: {self.YMAX}')
-        logger.info(f'Numbers of segmented cell = {self.n_cells_raw}; labels = {self.n_labels_raw}; features = {self.n_features}')
-        logger.info(f'Label indices dictionary is {self.label_indices_dict}')
+            logger.info(f'\tmin x: {self.XMIN}, min y: {self.YMIN}, max x: {self.XMAX}, max y: {self.YMAX}')
+        logger.info(f'\tNumbers of segmented cell = {self.n_cells_raw}; labels = {self.n_labels_raw}; features = {self.n_features}')
+        logger.info(f'\tLabel indices dictionary is {self.label_indices_dict}')
         for label in np.setdiff1d(self.raw_labels, ['background']):
             num_cells = len(np.where(self.raw_cell_metadata['raw_labels'].values == label)[0])
-            logger.info(f'Number of cells for {label}: {num_cells}')
+            logger.info(f'\tNumber of cells for {label}: {num_cells}')
 
     def use_settings(self, bg2):
         '''

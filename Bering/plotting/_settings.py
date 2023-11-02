@@ -18,7 +18,7 @@ def _PLOT_SETTINGS():
 
     mpl.rcParams['pdf.fonttype'] = 42
     mpl.rcParams['ps.fonttype'] = 42
-    mpl.rcParams['font.family'] = 'Arial'
+    # mpl.rcParams['font.family'] = 'Arial'
     mpl.rcParams.update({'font.size': 18})
     # plt.style.use('dark_background')
 

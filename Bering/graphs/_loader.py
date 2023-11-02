@@ -65,7 +65,7 @@ def BuildWindowGraphs(
     -------
     ``Bering_Graph.Graphs_golden``: :func:`~BrGraph` object with a list of graphs (``torch_geometric.data.Data``) for training
     """
-
+    logger.info(f'Create Graphs ...')
     # init
     Spots = bg.spots_all.copy()
     Graphs = []
@@ -141,15 +141,15 @@ def BuildWindowGraphs(
             Graphs.append(graph)
 
             if counts % 50 == 0:
-                logger.info(f'Build Neighbor graphs for {counts} th window (golden truth)')
-                logger.info(f'Number of dots in {counts} th window: {window_spots.shape[0]}')
+                logger.info(f'\tBuild Neighbor graphs for {counts} th window (golden truth)')
+                logger.info(f'\tNumber of dots in {counts} th window: {window_spots.shape[0]}')
                 
                 avg_neighbors = graph.edge_index.shape[1] / graph.x.shape[0]
-                logger.info(f'Average number of filtered neighbors: {avg_neighbors:.2f} in the window')
+                logger.info(f'\tAverage number of filtered neighbors: {avg_neighbors:.2f} in the window')
     
     bg.Graphs_golden = Graphs
-    logger.info(f'Number of node features: {bg.n_node_features}')
-    logger.info(f'\nTotal number of golden-truth graphs is {len(bg.Graphs_golden)}')
+    logger.info(f'\tNumber of node features: {bg.n_node_features}')
+    logger.info(f'\tTotal number of golden-truth graphs is {len(bg.Graphs_golden)}')
 
 def CreateData(
     bg: BrGraph, 
@@ -174,7 +174,7 @@ def CreateData(
         - ``Bering_Graph.test_loader``: Testing data loader (``torch_geometric.data.DataLoader``)
     '''
     # initialize
-    logger.info(f'Create training and testing datasets (golden truth)')
+    logger.info(f'Create training and testing loaders ...')
     dataset = bg.Graphs_golden
 
     N = len(dataset)

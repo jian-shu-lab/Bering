@@ -7,12 +7,14 @@ import scanpy as sc
 from scipy.sparse import csr_matrix
 
 from ..objects import Bering_Graph as BrGraph
+logger = logging.getLogger(__name__)
 
 def _ensemble_annotation(
     bg: BrGraph,
     min_transcripts: int = 50,
     min_dominant_nodes: int = 30,
     min_dominant_ratio: float = 0.6,
+    max_cell_diameter_ratio: float = 5.0,
 ):
     '''
     annotate cells based on ensemble approach
@@ -42,9 +44,17 @@ def _ensemble_annotation(
                     .rename_axis(['predicted_cells','predicted_labels'])\
                         .reset_index(name='Perc')
     )
-    cells_3 = df_perc.loc[(df_perc['predicted_labels'] != 'background')&(df_perc['Perc'] >= min_dominant_ratio), 'predicted_cells'].values
+    cells_3 = df_perc.loc[(df_perc['predicted_labels'] != 'background')&\
+                          (df_perc['Perc'] >= min_dominant_ratio), 'predicted_cells'].values
 
-    qualified_cells = np.intersect1d(np.intersect1d(cells_1, cells_2), cells_3)
+    # filter out cells with large diameter
+    d_med = np.median(bg.raw_cell_metadata.d.values)
+    gapDF = df_spots.groupby(['predicted_cells'])[['x','y']].agg(np.ptp)
+    gapDF.columns = ['dx', 'dy']
+    cells_4 = gapDF[(gapDF['dx'] < max_cell_diameter_ratio * d_med) & \
+                    (gapDF['dy'] < max_cell_diameter_ratio * d_med)].index.values
+
+    qualified_cells = np.intersect1d(np.intersect1d(np.intersect1d(cells_1, cells_2), cells_3), cells_4)
 
     df_perc.set_index('predicted_cells', inplace = True)
     qualified_labels = df_perc.loc[qualified_cells, 'predicted_labels'].values
@@ -118,6 +128,7 @@ def cell_annotation(
     min_transcripts: int = 50,
     min_dominant_nodes: int = 30,
     min_dominant_ratio: float = 0.6,
+    max_cell_diameter_ratio: float = 5.0,
 ):
     '''
     Annotate segmented cells based on ensemble strategy. A cell is considered as a qualified cell if it satisfies all of the following criteria:
@@ -137,13 +148,16 @@ def cell_annotation(
         Minimum number of dominant nodes for a cell to be considered
     min_dominant_ratio: float
         Minimum ratio of dominant nodes for a cell to be considered
-    
+    max_cell_diameter_ratio: float
+        Maximum ratio (vs. cell median diameter) of cell diameter for a cell to be considered
     '''
+    logger.info(f'Running cell annotation ...')
     df_spots, label_dict = _ensemble_annotation(
         bg = bg, 
         min_transcripts = min_transcripts,
         min_dominant_nodes = min_dominant_nodes, 
         min_dominant_ratio = min_dominant_ratio,
+        max_cell_diameter_ratio = max_cell_diameter_ratio,
     )
     adata_ensembl, adata_segmented = _create_anndata(df_spots, label_dict)
 

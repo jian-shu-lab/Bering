@@ -74,7 +74,7 @@ class TrainerEdge(object):
         '''
         running_loss = 0.0
         for idx, batch_data in enumerate(loader):
-            logger.info(f'Training batch {idx}')
+            # logger.info(f'\tTraining batch {idx}')
             batch_data.to(self.device)
             self.model.train()
             self.optimizer.zero_grad()
@@ -113,7 +113,7 @@ class TrainerEdge(object):
 
         running_loss = 0.0
         for idx, batch_data in enumerate(loader):
-            logger.info(f'Testing batch {idx}')
+            # logger.info(f'\tTesting batch {idx}')
             batch_data.to(self.device)
             self.model.eval()
 

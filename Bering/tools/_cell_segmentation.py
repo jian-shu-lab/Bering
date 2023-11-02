@@ -37,7 +37,7 @@ def cell_segmentation(
         Number of iterations for edge label prediction. This is only used when number of edges are to large.
         It can avoid memory overflow.
     '''
-
+    logger.info(f'Running cell segmentation ...')
     # predicted_cells = np.array(['background'] * bg.spots_all.shape[0])
     predicted_cells = np.array([0] * bg.spots_all.shape[0])
     foreground_indices = np.where(bg.spots_all['predicted_labels'].values != 'background')[0]
@@ -47,19 +47,28 @@ def cell_segmentation(
         split_by_tiling = True
     else:
         split_by_tiling = False
+    
+    if leiden_resolution is None:
+        leiden_resolutions = [0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5]
+    else:
+        if not isinstance(leiden_resolution, list):
+            leiden_resolutions = [leiden_resolution]
+
     clusters = find_clusters_predictedLinks(
         bg = bg,
         df_spots = df_spots, 
         use_image = use_image, 
         pos_thresh = positive_edge_thresh,
-        resolution = leiden_resolution,
+        resolutions = leiden_resolutions,
         num_edges_perSpot = num_edges_perSpot,
         n_neighbors = graph_n_neighbors,
         num_iters = num_iters,
         split_edges_byTiling = split_by_tiling,
     )
-    for k, v in clusters.items():
-        predicted_cells[foreground_indices] = v
+    # for k, v in clusters.items():
+    #     predicted_cells[foreground_indices] = v
+    # bg.spots_all['predicted_cells'] = predicted_cells
+    predicted_cells[foreground_indices] = clusters
     bg.spots_all['predicted_cells'] = predicted_cells
     
     # return clusters

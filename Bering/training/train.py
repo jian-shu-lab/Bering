@@ -177,6 +177,7 @@ def Training(
     plot_ax_size: float = 5.0,
     finetune: bool = False,
     baseline: bool = False,
+    remove_loader: bool = True,
 ):
     '''
     Training both node classification and edge classification models. 
@@ -343,3 +344,8 @@ def Training(
         early_stop_min_delta = edge_early_stop_delta,
         plot_ax_size = plot_ax_size,
     )
+
+    # remove loaders to save memory
+    if remove_loader:
+        del bg.train_loader
+        del bg.test_loader
