@@ -141,15 +141,15 @@ def BuildWindowGraphs(
             Graphs.append(graph)
 
             if counts % 50 == 0:
-                logger.info(f'\tBuild Neighbor graphs for {counts} th window (golden truth)')
-                logger.info(f'\tNumber of dots in {counts} th window: {window_spots.shape[0]}')
+                logger.info(f'    Build Neighbor graphs for {counts} th window (golden truth)')
+                logger.info(f'    Number of dots in {counts} th window: {window_spots.shape[0]}')
                 
                 avg_neighbors = graph.edge_index.shape[1] / graph.x.shape[0]
-                logger.info(f'\tAverage number of filtered neighbors: {avg_neighbors:.2f} in the window')
+                logger.info(f'    Average number of filtered neighbors: {avg_neighbors:.2f} in the window')
     
     bg.Graphs_golden = Graphs
-    logger.info(f'\tNumber of node features: {bg.n_node_features}')
-    logger.info(f'\tTotal number of golden-truth graphs is {len(bg.Graphs_golden)}')
+    logger.info(f'    Number of node features: {bg.n_node_features}')
+    logger.info(f'    Total number of golden-truth graphs is {len(bg.Graphs_golden)}')
 
 def CreateData(
     bg: BrGraph, 

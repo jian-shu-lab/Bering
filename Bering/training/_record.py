@@ -297,8 +297,8 @@ def record(
             axes[3] = _draw_auc(trainer, record_key, axes[3])
 
     # logger
-    logger.info(f'Train Loss in {record_key} network in epoch {epoch} is {(train_loss/len(train_loader.dataset)):.3f}')
-    logger.info(f'Validation Loss in {record_key} network in epoch {epoch} is {(validation_loss/len(test_loader.dataset)):.3f}')
+    logger.info(f'    Train Loss in {record_key} network in epoch {epoch} is {(train_loss/len(train_loader.dataset)):.3f}')
+    logger.info(f'    Validation Loss in {record_key} network in epoch {epoch} is {(validation_loss/len(test_loader.dataset)):.3f}\n')
     # logger.info(f'Accuracy (training) in {record_key} network in epoch {epoch} is {acc_train:.2f}')
     # logger.info(f'Accuracy (testing) in {record_key} network in epoch {epoch} is {acc_test:.2f}')
 

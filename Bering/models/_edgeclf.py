@@ -161,10 +161,10 @@ class EdgeClf(nn.Module):
             num_parameters_rbf = sum([p.numel() for p in self.rbf_kernel.parameters() if p.requires_grad])
         num_parameters_decoder = sum([p.numel() for p in self.decoder.parameters() if p.requires_grad])
 
-        logger.info(f'\tNumber of CNN parameters is {num_parameters_image}')
+        logger.info(f'    Number of CNN parameters is {num_parameters_image}')
         if self.distance_type == 'rbf':
-            logger.info(f'\tNumber of RBF kernel parameters is {num_parameters_rbf}')
-        logger.info(f'\tNumber of MLP decoder parameters is {num_parameters_decoder}')
+            logger.info(f'    Number of RBF kernel parameters is {num_parameters_rbf}')
+        logger.info(f'    Number of MLP decoder parameters is {num_parameters_decoder}')
 
     def forward(
         self, 
@@ -227,12 +227,12 @@ class EdgeClf(nn.Module):
                 image_graph, src_coords, dst_coords = _get_image_graph(pos_graph, image, src_coords, dst_coords, conv2d_padding)
                 image_graph = self.encoder_image.get_conv2d_embedding(image_graph)
                 t1 = time.time()
-                logger.info(f'\tGet image graph time: {(t1-t0):.5f} s')
+                logger.info(f'    Get image graph time: {(t1-t0):.5f} s')
                 
                 # binning coordinates
                 minx, maxx, miny, maxy, avail_bins, dist_bins_2d = _get_binned_coordinates(src_coords, dst_coords, self.image_binsize, self.min_image_size, self.max_image_size)
                 t2 = time.time()
-                logger.info(f'\tGet all binned coordinates time: {(t2-t1):.5f} s')
+                logger.info(f'    Get all binned coordinates time: {(t2-t1):.5f} s')
 
                 # run the model for eachedge
                 edge_attr_image = torch.empty((src_coords.shape[0], self.n_image_features)).double().cuda()
@@ -247,12 +247,12 @@ class EdgeClf(nn.Module):
 
                     subimages = torch.cat(subimages, axis = 0)
                     t4 = time.time()
-                    logger.info(f'\t\tbin size: {avail_bin}, num of subimages: {len(bin_indices)}')
-                    logger.info(f'\t\tConcat / read time: {(t4-t3):.5f} s')
+                    logger.info(f'        bin size: {avail_bin}, num of subimages: {len(bin_indices)}')
+                    logger.info(f'        Concat / read time: {(t4-t3):.5f} s')
                     edge_attr_image_bin = self.encoder_image(subimages)
                     edge_attr_image[bin_indices, :] = edge_attr_image_bin
                     t5 = time.time()
-                    logger.info(f'\t\tencode subimages time: {(t5-t4):.5f} s')
+                    logger.info(f'        encode subimages time: {(t5-t4):.5f} s')
 
                 edge_attr = torch.cat([edge_attr, edge_attr_image], dim = -1)
 

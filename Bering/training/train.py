@@ -77,7 +77,7 @@ def _trainNode(
     early_stopper = EarlyStopper(early_stop_patience, early_stop_min_delta)
     
     pbar = tqdm(range(epoches), desc = 'Training node classifier', colour='blue')
-    epoch_interval = 5
+    epoch_interval = 20
     
     for epoch in pbar:
         train_loss = trainer.update(train_loader) # loss function = CrossEntropy
@@ -121,7 +121,7 @@ def _trainEdge(
     early_stopper = EarlyStopper(early_stop_patience, early_stop_min_delta)
 
     pbar = tqdm(range(epoches), desc = 'Training edge classifier', colour='red')
-    epoch_interval = 5
+    epoch_interval = 20
 
     for epoch in pbar:
         train_loss = trainer.update(train_loader, image) # loss function = CrossEntropy

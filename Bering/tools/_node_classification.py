@@ -29,7 +29,7 @@ def _get_node_embedding_prediction_byTiling(bg, df_spots, num_chunks, n_neighbor
     num_chunks_axis = np.round(np.sqrt(num_chunks)).astype(int)
     num_chunks = num_chunks_axis ** 2
     
-    logger.info(f'\tNumber of chunks for node classification (adjusted): {num_chunks}')
+    logger.info(f'    Number of chunks for node classification (adjusted): {num_chunks}')
 
     # tile_size_x = (np.max(x) - np.min(x)) / num_chunks_axis
     # tile_size_y = (np.max(y) - np.min(y)) / num_chunks_axis
@@ -41,7 +41,7 @@ def _get_node_embedding_prediction_byTiling(bg, df_spots, num_chunks, n_neighbor
     else:
         z_all = torch.zeros((df_spots.shape[0], bg.trainer_node.model.mlp_layer_dims[-(bg.trainer_node.model.num_mlp_layers_remain+1)]), dtype = torch.double) # MLP
     
-    logger.info(f'\tsize of z_all: {z_all.shape}')
+    logger.info(f'    Size of z_all: {z_all.shape}')
     preds_logits = torch.zeros((df_spots.shape[0], bg.n_labels_raw), dtype = torch.double)
 
     for i in range(num_chunks_axis):
@@ -134,16 +134,16 @@ def node_classification(
     except:
         graph_all = None
         bg.pos_all = _get_pos(bg.spots_all)
-        logger.info(f'\tThere are too many spots in the slice. Skip the generation of the whole graph.')
+        logger.info(f'    There are too many spots in the slice. Skip the generation of the whole graph.')
 
     # get latent
-    logger.info(f'\tGet the latent space for all {df_spots.shape[0]} nodes')
+    logger.info(f'    Get the latent space for all {df_spots.shape[0]} nodes')
     bg.trainer_node.model.to('cpu')
     if bg.spots_all.shape[0] <= max_num_spots:
         bg.z_all = bg.trainer_node.model.get_latent(graph_all)
         preds_logits = bg.trainer_node.predict(graph_all, device = 'cpu').cpu()
     else:
-        logger.info(f'\tNumber of chunks for node classification: {num_chunks}')
+        logger.info(f'    Number of chunks for node classification: {num_chunks}')
         bg.z_all, preds_logits = _get_node_embedding_prediction_byTiling(bg, df_spots, num_chunks, n_neighbors, beta)
 
     # prediction results

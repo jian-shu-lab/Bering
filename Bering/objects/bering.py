@@ -192,14 +192,14 @@ class Bering_Graph():
         del self.spots_unseg
         # logging
         if self.dimension == '3d':
-            logger.info(f'\tmin x: {self.XMIN}, min y: {self.YMIN}, max x: {self.XMAX}, max y: {self.YMAX}, min z: {self.ZMIN}, max z: {self.ZMAX}')
+            logger.info(f'    min x: {self.XMIN}, min y: {self.YMIN}, max x: {self.XMAX}, max y: {self.YMAX}, min z: {self.ZMIN}, max z: {self.ZMAX}')
         else:
-            logger.info(f'\tmin x: {self.XMIN}, min y: {self.YMIN}, max x: {self.XMAX}, max y: {self.YMAX}')
-        logger.info(f'\tNumbers of segmented cell = {self.n_cells_raw}; labels = {self.n_labels_raw}; features = {self.n_features}')
-        logger.info(f'\tLabel indices dictionary is {self.label_indices_dict}')
+            logger.info(f'    min x: {self.XMIN}, min y: {self.YMIN}, max x: {self.XMAX}, max y: {self.YMAX}')
+        logger.info(f'    Numbers of segmented cell = {self.n_cells_raw}; labels = {self.n_labels_raw}; features = {self.n_features}')
+        logger.info(f'    Label indices dictionary is {self.label_indices_dict}')
         for label in np.setdiff1d(self.raw_labels, ['background']):
             num_cells = len(np.where(self.raw_cell_metadata['raw_labels'].values == label)[0])
-            logger.info(f'\tNumber of cells for {label}: {num_cells}')
+            logger.info(f'    Number of cells for {label}: {num_cells}')
 
     def use_settings(self, bg2):
         '''
