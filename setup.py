@@ -8,10 +8,10 @@ long_description = '\n\n'.join([open(os.path.join(base_dir,'README.rst'),'r').re
 
 setup(
     name = 'Bering',
-    version = '0.1.1',
+    version = '0.1.2',
     description = 'Bering: Transfer Learning of Cell Segmentation and Annotation for Spatial Omics',
     author = 'Kang Jin',
-    author_email = 'jinkg@mail.uc.edu',
+    author_email = 'kangjin@fas.harvard.edu',
     maintainer = 'Kang Jin',
     long_description = long_description,
     long_description_content_type = 'text/markdown',
