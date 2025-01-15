@@ -32,7 +32,7 @@ Please refer to our manuscript `Jin, Zhang et al. (2023)`_ for more details.
 
 Contact
 -----------------------
-We are happy about any feedback! If you have any questions, please feel free to contact Kang.Jin@cchmc, zuobai.zhang@mila.quebec.
+We are happy about any feedback! If you have any questions, please feel free to contact kangjin@fas.harvard.edu, zuobai.zhang@mila.quebec.
 Find more research in `Shu_Jian_Lab`_.
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/Bering
