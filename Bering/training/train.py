@@ -67,7 +67,7 @@ def _trainNode(
     early_stop: bool = True,
     early_stop_patience: int = 5,
     early_stop_min_delta: float = 0.025,
-    plotting: bool = False,
+    plotting: bool = True,
     plot_ax_size: float = 5.0,
 ):
     '''
@@ -79,6 +79,7 @@ def _trainNode(
     pbar = tqdm(range(epoches), desc = 'Training node classifier', colour='blue')
     epoch_interval = 20
     
+    torch.cuda.reset_peak_memory_stats()
     for epoch in pbar:
         train_loss = trainer.update(train_loader) # loss function = CrossEntropy
         validation_loss = trainer.validate(test_loader)
@@ -86,7 +87,7 @@ def _trainNode(
             break
         if (epoch % epoch_interval == 0) or epoch == (epoches - 1):
             if epoch == (epoches - 1):
-                plotting = False
+                plotting = True
             record(
                 trainer, 
                 None,
@@ -97,7 +98,12 @@ def _trainNode(
                 plotting = plotting,
                 ax_size = plot_ax_size,
                 plot_name = f'{trainer_type}_node.png'
-            )    
+            )
+
+        current_memory = torch.cuda.memory_allocated() / (1024 ** 2)  # in MB
+        max_memory = torch.cuda.max_memory_allocated() / (1024 ** 2)  # in MB
+        
+        logger.info(f"    !!! Epoch [{epoch+1}], Current GPU memory: {current_memory:.2f} MB, Peak GPU memory: {max_memory:.2f} MB")
     return trainer
 
 def _trainEdge(
@@ -111,7 +117,7 @@ def _trainEdge(
     early_stop: bool = True,
     early_stop_patience: int = 5,
     early_stop_min_delta: float = 0.025,
-    plotting: bool = False,
+    plotting: bool = True,
     plot_ax_size: float = 5.0,
 ):  
     '''
@@ -123,6 +129,7 @@ def _trainEdge(
     pbar = tqdm(range(epoches), desc = 'Training edge classifier', colour='red')
     epoch_interval = 20
 
+    torch.cuda.reset_peak_memory_stats()
     for epoch in pbar:
         train_loss = trainer.update(train_loader, image) # loss function = CrossEntropy
         validation_loss = trainer.validate(test_loader, image)
@@ -130,7 +137,7 @@ def _trainEdge(
             break
         if (epoch % epoch_interval == 0) or epoch == (epoches - 1):
             if epoch == (epoches - 1):
-                plotting = False
+                plotting = True
             _, auc_test, _, prec_test, _, _ = record(
                 trainer, 
                 image,
@@ -142,6 +149,12 @@ def _trainEdge(
                 plot_name = f'{trainer_type}_edge.png',
                 ax_size = plot_ax_size,
             )
+
+        current_memory = torch.cuda.memory_allocated() / (1024 ** 2)  # in MB
+        max_memory = torch.cuda.max_memory_allocated() / (1024 ** 2)  # in MB
+        
+        logger.info(f"    !!! Epoch [{epoch+1}], Current GPU memory: {current_memory:.2f} MB, Peak GPU memory: {max_memory:.2f} MB")
+
     return trainer
 
 
@@ -162,6 +175,8 @@ def Training(
     edge_rbf_stop: int = 64,
     edge_rbf_n_kernels: int = 64, 
     edge_rbf_learnable: bool = True,
+    edge_image_repr: str = 'cellpose',
+    edge_cellpose_flow: np.array = None,
     edge_image_conv2d_hidden_dims: Sequence[int] = [6, 16, 32, 64, 128],
     edge_image_mlp_hidden_dims: Sequence[int] = [32, 64],
     edge_decoder_mlp_hidden_dims: Sequence[int] = [16, 8],
@@ -177,6 +192,7 @@ def Training(
     plot_ax_size: float = 5.0,
     finetune: bool = False,
     baseline: bool = False,
+    train_after_initialization: bool = True,
     remove_loader: bool = True,
 ):
     '''
@@ -280,6 +296,8 @@ def Training(
         edgeclf = EdgeClf(
             n_node_latent_features = node_mlp_hidden_dims[1], 
             image = bg.image_raw,
+            image_repr = edge_image_repr,
+            cellpose_flow = edge_cellpose_flow,
             image_model = (bg.image_raw is not None),
             decoder_mlp_layer_dims = edge_decoder_mlp_hidden_dims,
             distance_type = edge_distance_type,
@@ -295,34 +313,43 @@ def Training(
         )
     
     # train node clf
-    performance_folder = 'figures/performance_' + datetime.datetime.now().strftime('%m-%d %H-%M-%S'); os.mkdir(performance_folder)
+    random_digit = np.random.randint(1000, 2000)
+    performance_folder = 'figures/performance_' + datetime.datetime.now().strftime('%m-%d %H-%M-%S') + f'_{random_digit}'; os.mkdir(performance_folder)
     if not finetune:
         bg.trainer_node = TrainerNode(nodeclf, lr = node_lr, weight_decay = node_weight_decay, weight_seg = node_foreground_weight, weight_bg = node_background_weight)
 
-    keyword = 'training_GCN' if baseline == False else 'training_baseline'
-    bg.trainer_node = _trainNode(
-        bg.trainer_node, 
-        bg.train_loader, 
-        bg.test_loader, 
-        keyword,
-        performance_folder, 
-        epoches = node_epoches,
-        early_stop = node_early_stop,
-        early_stop_patience = node_early_stop_patience,
-        early_stop_min_delta = node_early_stop_delta,
-        plot_ax_size = plot_ax_size,
-    )
+    if train_after_initialization:
+        keyword = 'training_GCN' if baseline == False else 'training_baseline'
+        bg.trainer_node = _trainNode(
+            bg.trainer_node, 
+            bg.train_loader, 
+            bg.test_loader, 
+            keyword,
+            performance_folder, 
+            epoches = node_epoches,
+            early_stop = node_early_stop,
+            early_stop_patience = node_early_stop_patience,
+            early_stop_min_delta = node_early_stop_delta,
+            plot_ax_size = plot_ax_size,
+        )
 
-    # freeze node clf
-    for param in bg.trainer_node.model.parameters():
-        param.require_grad = False 
+        # freeze node clf
+        for param in bg.trainer_node.model.parameters():
+            param.require_grad = False 
     
     # train edge clf
     if bg.image_raw is None:
         image_ = None
     else:
-        image_ = torch.from_numpy(bg.image_raw).double().cuda()
-        image_ = image_[None, :, :, :]
+        if edge_image_repr == 'cnn_embedding':
+            bg.edge_image_repr = edge_image_repr
+            image_ = torch.from_numpy(bg.image_raw).double()
+            image_ = image_[None, :, :, :]
+        elif edge_image_repr == 'cellpose':
+            image_ = torch.from_numpy(edge_cellpose_flow).double()
+            image_ = image_[None, :, :, :]
+            bg.edge_image_repr = edge_image_repr
+            bg.edge_cellpose_flow = image_
 
     if not finetune:
         bg.trainer_edge = TrainerEdge(
@@ -331,21 +358,25 @@ def Training(
         )
     else:
         bg.trainer_edge.nodeclf_model = bg.trainer_node.model
-    bg.trainer_edge = _trainEdge(
-        bg.trainer_edge, 
-        image_,
-        bg.train_loader, 
-        bg.test_loader, 
-        keyword,
-        performance_folder,
-        epoches = edge_epoches,
-        early_stop = edge_early_stop,
-        early_stop_patience = edge_early_stop_patience,
-        early_stop_min_delta = edge_early_stop_delta,
-        plot_ax_size = plot_ax_size,
-    )
+    
+    if train_after_initialization:
+        if image_ is not None:
+            image_ = image_.cuda()
+        bg.trainer_edge = _trainEdge(
+            bg.trainer_edge, 
+            image_,
+            bg.train_loader, 
+            bg.test_loader, 
+            keyword,
+            performance_folder,
+            epoches = edge_epoches,
+            early_stop = edge_early_stop,
+            early_stop_patience = edge_early_stop_patience,
+            early_stop_min_delta = edge_early_stop_delta,
+            plot_ax_size = plot_ax_size,
+        )
 
-    # remove loaders to save memory
-    if remove_loader:
-        del bg.train_loader
-        del bg.test_loader
+        # remove loaders to save memory
+        if remove_loader:
+            del bg.train_loader
+            del bg.test_loader

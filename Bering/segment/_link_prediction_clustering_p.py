@@ -26,6 +26,7 @@ def _get_edge_embedding(
     trainer: TrainerEdge,
     pos: torch.Tensor,
     image: torch.Tensor,
+    image_repr: Optional[str], # 'cnn_embedding' or 'cellpose' or None
     z_node: torch.Tensor,
     edge_indices: torch.Tensor,
     max_subplots_perRound: int = 5000,
@@ -41,16 +42,16 @@ def _get_edge_embedding(
         trainer.model.encoder_image.eval()
 
     if trainer.model.distance_type == 'positional':
-        # z_node = torch.cat((z_node, pos[:,[1,2]]), axis = -1) # 2d
-        z_node = torch.cat((z_node, pos[:,[1,2,3]]), axis = -1) # 3d
+        z_node = torch.cat((z_node, pos[:,[1,2]]), axis = -1) # 2d
+        # z_node = torch.cat((z_node, pos[:,[1,2,3]]), axis = -1) # 3d
     src = edge_indices[:,0]
     dst = edge_indices[:,1]
 
     edge_attr = torch.cat((z_node[src], z_node[dst]), axis = -1)
-    # src_coords = pos[src, :][:,[1,2]] # 2d
-    # dst_coords = pos[dst, :][:,[1,2]]
-    src_coords = pos[src, :][:,[1,2,3]] # 3d
-    dst_coords = pos[dst, :][:,[1,2,3]]
+    src_coords = pos[src, :][:,[1,2]] # 2d
+    dst_coords = pos[dst, :][:,[1,2]]
+    # src_coords = pos[src, :][:,[1,2,3]] # 3d
+    # dst_coords = pos[dst, :][:,[1,2,3]]
 
     if trainer.model.distance_type == 'rbf':
         trainer.model.rbf_kernel.to('cpu')
@@ -61,12 +62,16 @@ def _get_edge_embedding(
     pos = torch.cat((pos[src,:], pos[dst,:]), axis = 0)
 
     # get image features
-    if (image is not None) and trainer.model.image_model:
+    if (image is not None) and trainer.model.image_model and (image_repr is not None):
         import time
         # get conv2d embeddings
         t0 = time.time()
-        image_graph, src_coords, dst_coords = _get_image_graph(pos, image, src_coords, dst_coords)
-        image_graph = trainer.model.encoder_image.get_conv2d_embedding(image_graph)
+        if image_repr == 'cnn_embedding':
+            image_graph, src_coords, dst_coords = _get_image_graph(pos, image, src_coords, dst_coords)
+            logger.info(f'    Size of image graph: {image_graph.shape}')
+            image_graph = trainer.model.encoder_image.get_conv2d_embedding(image_graph)
+        elif image_repr == 'cellpose':
+            image_graph, src_coords, dst_coords = _get_image_graph(pos, image, src_coords, dst_coords)
         t1 = time.time()
         logger.info(f'    Get image graph time: {(t1-t0):.5f} s. Number of edges: {src_coords.shape[0]}')
         
@@ -78,7 +83,8 @@ def _get_edge_embedding(
         logger.info(f'    Get all binned coordinates time: {(t2-t1):.5f} s')
 
         # run the model for eachedge
-        edge_attr_image = torch.empty((src_coords.shape[0], trainer.model.n_image_features)).double().cuda()
+        # edge_attr_image = torch.empty((src_coords.shape[0], trainer.model.n_image_features)).double().cuda()
+        edge_attr_image = torch.empty((src_coords.shape[0], trainer.model.n_image_features)).double()
         for avail_bin in avail_bins:
             bin_indices = torch.where((dist_bins_2d == avail_bin).all(dim=1))[0]
             logger.info(f'    Number of edges in bin {avail_bin}: {len(bin_indices)}')
@@ -179,6 +185,7 @@ def _run_leiden(
     )
     clusters = partition.membership
     clusters = [i+1 for i in clusters]
+    logger.info(f'    Leiden clustering finds {len(np.unique(clusters))} clusters')
     return clusters
 
 def _find_best_resolution(
@@ -240,18 +247,18 @@ def _get_edge_chunks_byTiling(edges_whole, num_chunks, x, y):
     return edges_whole_sections, num_chunks
 
 @torch.no_grad()
-def run_leiden_predictedLink(
+def run_leiden_predictedLink_p(
     bg: BrGraph,
     df_spots: pd.DataFrame,
     use_image: bool = True,
     pos_thresh: float = 0.6,
     neg_thresh: float = 0.5,
     resolutions: Optional[List[float]] = None,
+    median_num_transcripts: Optional[int] = None,
+    median_cell_diameter: Optional[float] = None,
     num_edges_perSpot: Optional[int] = None,
     max_diameter_ratio: float = 1.0,
     n_neighbors: int = 10,
-    num_iters: int = 10,
-    split_edges_byTiling: bool = False,
 ):  
     # get all edges at once
     if bg.dimension == '2d':
@@ -263,8 +270,6 @@ def run_leiden_predictedLink(
     N_nodes = df_spots.shape[0]
 
     # A = kneighbors_graph(coords, num_edges_perSpot, mode = 'connectivity', include_self = False)
-    median_diameter = np.median(bg.raw_cell_metadata['d'].values)
-    max_diameter = max_diameter_ratio * median_diameter
 
     median_n_counts_per_cell = np.sum(bg.spots_all['raw_cells'].values != 0) / bg.n_cells_raw
     if num_edges_perSpot is None:
@@ -273,16 +278,22 @@ def run_leiden_predictedLink(
 
     A = coo_matrix(A)
     row, col, dist = A.row, A.col, A.data
-    row, col = row[dist <= max_diameter], col[dist <= max_diameter] # limiting max diameter
+
+    if bg.raw_cell_metadata.shape[0] > 0:
+        # limiting max diameter
+        median_diameter = np.median(bg.raw_cell_metadata['d'].values)
+        max_diameter = max_diameter_ratio * median_diameter
+        row, col = row[dist <= max_diameter], col[dist <= max_diameter] 
+
     edges_whole = torch.from_numpy(np.array([row, col]).T).long()
     logger.info(f'    Total number of edges for segmentation task is {edges_whole.shape[0]}')
 
     # chunk edges
-    logger.info(f'    Split edges into chunks, number of chunks: {num_iters}')
-    if split_edges_byTiling == False:
-        edges_whole_sections = _get_edge_chunks_random(edges_whole, num_iters)
-    else:
-        edges_whole_sections, num_iters = _get_edge_chunks_byTiling(edges_whole, num_iters, x, y)
+    edges_whole_sections = _get_edge_chunks_random(edges_whole, 1)
+    # if split_edges_byTiling == False:
+    #     edges_whole_sections = _get_edge_chunks_random(edges_whole, num_iters)
+    # else:
+    #     edges_whole_sections, num_iters = _get_edge_chunks_byTiling(edges_whole, num_iters, x, y)
     
     # prepare graph and node embeddings
     logger.info(f'    Prepare graph and node embeddings')
@@ -303,31 +314,34 @@ def run_leiden_predictedLink(
 
     # prepare image
     if (bg.image_raw is not None) and use_image:
-        image_ = torch.from_numpy(bg.image_raw).double()
-        image_ = image_[None, :, :, :].cuda()
+        if bg.edge_image_repr == 'cnn_embedding':
+            image_ = torch.from_numpy(bg.image_raw).double()
+            image_ = image_[None, :, :, :]
+        elif bg.edge_image_repr == 'cellpose':
+            image_ = bg.edge_cellpose_flow
     else:
         image_ = None
 
     # run for each chunk
-    logger.info(f'    Total number of iterations is {num_iters}')
-    for iter in range(num_iters):
-        if iter % 10 == 0:
-            logger.info(f'    Iteration {iter + 1} of {num_iters} is running')
-        edges_iter = edges_whole_sections[iter]
+    iter = 0
+    edges_iter = edges_whole_sections[0]
+    edge_image_repr = bg.edge_image_repr if hasattr(bg, 'edge_image_repr') else None
+    if edges_iter.shape[0] > 0:
+        edge_attr, edge_indices = _get_edge_embedding(
+            trainer = bg.trainer_edge, 
+            pos = pos_whole, 
+            image = image_, 
+            image_repr = edge_image_repr,
+            z_node = z_whole, 
+            edge_indices = edges_iter,
+        )
+        pred_logits = _get_edge_labels(bg, edge_attr)
+    else:
+        edge_indices = torch.zeros((0, 2)).long() # empty tile
+        pred_logits = np.array([])
 
-        if edges_iter.shape[0] > 0:
-            edge_attr, edge_indices = _get_edge_embedding(bg.trainer_edge, pos_whole, image_, z_whole, edges_iter)
-            pred_logits = _get_edge_labels(bg, edge_attr)
-        else:
-            edge_indices = torch.zeros((0, 2)).long() # empty tile
-            pred_logits = np.array([])
-
-        if iter == 0:
-            edge_indices_whole = torch.clone(edge_indices)
-            pred_logits_whole = pred_logits.copy()
-        else:
-            edge_indices_whole = torch.cat((edge_indices_whole, edge_indices), dim = 0)
-            pred_logits_whole = np.concatenate((pred_logits_whole, pred_logits), axis = 0)
+    edge_indices_whole = torch.clone(edge_indices)
+    pred_logits_whole = pred_logits.copy()
 
     # create adjancy matrix
     edge_indices_whole = edge_indices_whole.numpy()
@@ -336,19 +350,38 @@ def run_leiden_predictedLink(
 
     g = _create_adjacency_matrix(edge_indices_whole, pred_logits_whole, pos_thresh, neg_thresh, N_nodes)
 
-    # clustering across resolutions
-    clusters = {}
-    if not isinstance(resolutions, list):
-        raise ValueError('resolution must be a list')
-    for res in resolutions:
-        if res < 0:
-            raise ValueError('resolution must be non-negative')
+    resolution_update = 0.01
+    diff_median_spots = 10000
+    num_iters = 0
+    max_num_iters = 20
+    min_resolution = 0.0005
+    max_resolution = 2.0
+    while (abs(diff_median_spots) > median_num_transcripts * 0.2) and (num_iters < max_num_iters) and (min_resolution < resolution_update < max_resolution):
+        clusters = _run_leiden(g, resolution_update)
+        clusters_median_spots = len(clusters) / len(np.unique(clusters))
+        diff_median_spots = clusters_median_spots - median_num_transcripts
+        if diff_median_spots > 0:
+            resolution_update *= 1.3
         else:
-            clusters[res] = _run_leiden(g, res)
+            resolution_update /= 1.3
+        num_iters += 1
 
-    # find the best resolution
-    res_best, AMI_best = _find_best_resolution(df_spots.copy(), clusters)
-    cluster = clusters[res_best]
-    bg.resolution = res_best
+    # # clustering across resolutions
+    # clusters = {}
+    # if not isinstance(resolutions, list):
+    #     raise ValueError('resolution must be a list')
+    # for res in resolutions:
+    #     if res < 0:
+    #         raise ValueError('resolution must be non-negative')
+    #     else:
+    #         clusters[res] = _run_leiden(g, res)
+
+    # # find the best resolution
+    # res_best, AMI_best = _find_best_resolution(df_spots.copy(), clusters)
+    # cluster = clusters[res_best]
+    # bg.resolution = res_best
+    logger.info(f'------------------final resolution: {resolution_update}------------------')
+    logger.info(f'------------------median spots per cell: {clusters_median_spots}------------------')
+    cluster = clusters
 
     return cluster

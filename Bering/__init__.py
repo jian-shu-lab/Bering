@@ -5,4 +5,5 @@ from . import plotting as pl
 from . import training as train
 from . import graphs as graph
 from . import tools as tl
+from . import tools_parallel as tlp
 from . import models as model

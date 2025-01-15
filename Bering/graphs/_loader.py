@@ -85,6 +85,7 @@ def BuildWindowGraphs(
         cells = cell_meta.loc[cell_meta['raw_labels'] == label, :].index.values
         selected_cells += random.sample(list(cells), min(n_cells_perClass, len(cells)))
 
+    logger.info(f'    Number of selected cells: {len(selected_cells)}')
     counts = 0
     for cell_idx, cell in enumerate(selected_cells):
         cx, cy, cz, d = bg.raw_cell_metadata.loc[cell, 'cx'], bg.raw_cell_metadata.loc[cell, 'cy'], bg.raw_cell_metadata.loc[cell, 'cz'], bg.raw_cell_metadata.loc[cell, 'd']
@@ -147,6 +148,7 @@ def BuildWindowGraphs(
                 avg_neighbors = graph.edge_index.shape[1] / graph.x.shape[0]
                 logger.info(f'    Average number of filtered neighbors: {avg_neighbors:.2f} in the window')
     
+    logger.info(f'    Total number of qualified graphs (cells) is {len(Graphs)}')
     bg.Graphs_golden = Graphs
     logger.info(f'    Number of node features: {bg.n_node_features}')
     logger.info(f'    Total number of golden-truth graphs is {len(bg.Graphs_golden)}')

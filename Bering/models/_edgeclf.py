@@ -38,6 +38,7 @@ def _get_image_graph(
 
     src_coords = torch.round(src_coords).long()
     dst_coords = torch.round(dst_coords).long()
+    logger.info(f'during creating the image graph, xmin, xmax, ymin, ymax are {xmin}, {xmax}, {ymin}, {ymax}, respectively')
     
     return image_graph, src_coords, dst_coords
 
@@ -98,6 +99,8 @@ class EdgeClf(nn.Module):
         self, 
         n_node_latent_features: int, 
         image: Union[torch.Tensor, np.ndarray],
+        image_repr: str = 'cellpose',
+        cellpose_flow: np.ndarray = None,
         image_model: bool = True,
         decoder_mlp_layer_dims: Sequence[int] = [16, 8],
         distance_type: Optional[str] = 'rbf',
@@ -129,7 +132,14 @@ class EdgeClf(nn.Module):
             self.max_image_size = max_subimage_size
             self.min_image_size = min_subimage_size
             
-            self.encoder_image = ImageEncoder(image_dims = image.shape, cnn_layer_dims = encoder_image_layer_dims_conv2d, mlp_layer_dims = encoder_image_layer_dims_mlp)
+            self.encoder_image = ImageEncoder(
+                image_dims = image.shape, image_repr = image_repr,
+                cnn_layer_dims = encoder_image_layer_dims_conv2d, mlp_layer_dims = encoder_image_layer_dims_mlp
+            )
+            # if image_repr == 'cellpose':
+            #     self.flow = torch.tensor(cellpose_flow).double()
+            #     self.flow = self.flow[None, :, :, :]    
+            
             self.n_image_features = encoder_image_layer_dims_mlp[-1]
             num_parameters_image = sum([p.numel() for p in self.encoder_image.parameters() if p.requires_grad])
         else:
@@ -210,10 +220,10 @@ class EdgeClf(nn.Module):
 
             # get attributes
             edge_attr = torch.cat([z_node[src], z_node[dst]], dim = -1)
-            # src_coords = data.pos[src, :][:,[1,2]] # 2d
-            # dst_coords = data.pos[dst, :][:,[1,2]]
-            src_coords = data.pos[src, :][:,[1,2,3]] # 3d
-            dst_coords = data.pos[dst, :][:,[1,2,3]]
+            src_coords = data.pos[src, :][:,[1,2]] # 2d
+            dst_coords = data.pos[dst, :][:,[1,2]]
+            # src_coords = data.pos[src, :][:,[1,2,3]] # 3d
+            # dst_coords = data.pos[dst, :][:,[1,2,3]]
 
             if self.distance_type == 'rbf':
                 edge_attr_rbf = self.rbf_kernel(x = src_coords, y = dst_coords)            
@@ -221,11 +231,16 @@ class EdgeClf(nn.Module):
 
             if self.image_model:
                 import time
-                # get conv2d embeddings
+                # get conv2d embeddings (either from cellpose flow or home-trained CNN)
                 t0 = time.time()
                 pos_graph = data.pos[data.ptr[graph_index]:data.ptr[graph_index+1], :]
-                image_graph, src_coords, dst_coords = _get_image_graph(pos_graph, image, src_coords, dst_coords, conv2d_padding)
-                image_graph = self.encoder_image.get_conv2d_embedding(image_graph)
+                if self.encoder_image.image_repr == 'cnn_embedding':
+                    image_graph, src_coords, dst_coords = _get_image_graph(pos_graph, image, src_coords, dst_coords, conv2d_padding)
+                    image_graph = self.encoder_image.get_conv2d_embedding(image_graph)
+                
+                elif self.encoder_image.image_repr == 'cellpose':
+                    image_graph, src_coords, dst_coords = _get_image_graph(pos_graph, image, src_coords, dst_coords, conv2d_padding)
+
                 t1 = time.time()
                 logger.info(f'    Get image graph time: {(t1-t0):.5f} s')
                 

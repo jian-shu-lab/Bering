@@ -46,6 +46,7 @@ def _get_node_embedding_prediction_byTiling(bg, df_spots, num_chunks, n_neighbor
 
     for i in range(num_chunks_axis):
         for j in range(num_chunks_axis):
+            logger.info(f'    Processing tile ({i},{j}) ...')
             # min_x, max_x = np.min(x) + i * tile_size_x, np.min(x) + (i + 1) * tile_size_x
             # min_y, max_y = np.min(y) + j * tile_size_y, np.min(y) + (j + 1) * tile_size_y
             min_x, max_x = x_percentiles[i], x_percentiles[i + 1]
@@ -68,7 +69,7 @@ def _get_node_embedding_prediction_byTiling(bg, df_spots, num_chunks, n_neighbor
             if len(tile_indices) > n_neighbors + 1:
                 df_spots_section = df_spots.iloc[tile_indices, :]
                 # logger.info(f'Number of spots in tile (i,j) {(i,j)} is {df_spots_section.shape[0]}')
-                graph_section = BuildGraph_fromRaw(bg, df_spots_section, bg.features.copy(), n_neighbors, beta).cpu()
+                graph_section = BuildGraph_fromRaw(bg, df_spots_section, bg.features.copy(), n_neighbors, beta, device = 'cpu').cpu()
                 z_section = bg.trainer_node.model.get_latent(graph_section)
                 # logger.info(f'size of z_section (1): {z_section.shape}')
                 preds_logits_section = bg.trainer_node.predict(graph_section, device = 'cpu').cpu()
@@ -129,7 +130,7 @@ def node_classification(
     # build graph
     logger.info(f'Runnning node classification ...')
     try:
-        graph_all = BuildGraph_fromRaw(bg, df_spots, bg.features.copy(), n_neighbors, beta).cpu()
+        graph_all = BuildGraph_fromRaw(bg, df_spots, bg.features.copy(), n_neighbors, beta, device = 'cpu').cpu()
         bg.graph_all = graph_all
     except:
         graph_all = None

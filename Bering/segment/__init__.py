@@ -1,2 +1,3 @@
 from ._link_prediction_clustering import run_leiden_predictedLink as find_clusters_predictedLinks
+from ._link_prediction_clustering_p import run_leiden_predictedLink_p as find_clusters_predictedLinks_p
 from ._settings import SEGMENT_KEYS

@@ -43,6 +43,8 @@ class ImageEncoder(nn.Module):
     ----------
     image_dims
         dimensions of the input image (n_samples x n_channels x W x H)
+    image_repr
+        which image representation to use. 'cellpose', 'cnn_embedding' are supported now.
     cnn_layer_dims
         dimensions of CNN layers
     mlp_layer_dim
@@ -53,6 +55,7 @@ class ImageEncoder(nn.Module):
     def __init__(
         self, 
         image_dims: Sequence[int], 
+        image_repr: str = 'cellpose', 
         cnn_layer_dims: Sequence[int] = [6, 16, 32], 
         mlp_layer_dims: Sequence[int] = [32, 32],
         spp_output_size: Sequence[int] = [4, 2, 1],
@@ -60,30 +63,36 @@ class ImageEncoder(nn.Module):
 
         super().__init__()
 
-        self.cnn_layer_dims = [image_dims[0]] + cnn_layer_dims
+        self.image_repr = image_repr
+        if self.image_repr == 'cnn_embedding':
+            self.cnn_layer_dims = [image_dims[0]] + cnn_layer_dims
         self.mlp_layer_dims = [image_dims[1] * image_dims[2] * cnn_layer_dims[-1]] + mlp_layer_dims
         self.output_num = spp_output_size
 
-        self.cnn_layers = nn.Sequential(
-            collections.OrderedDict(
-                [
-                    (
-                        f"Layer_CNN {i}",
-                        nn.Sequential(
-                            nn.Conv2d(
-                                in_channel, out_channel, 
-                                kernel_size=3, padding=1, stride=1,
+        if self.image_repr == 'cnn_embedding':
+            self.cnn_layers = nn.Sequential(
+                collections.OrderedDict(
+                    [
+                        (
+                            f"Layer_CNN {i}",
+                            nn.Sequential(
+                                nn.Conv2d(
+                                    in_channel, out_channel, 
+                                    kernel_size=3, padding=1, stride=1,
+                                ),
+                                nn.ReLU(),
                             ),
-                            nn.ReLU(),
-                        ),
-                    )
-                    for i, (in_channel, out_channel) in enumerate(
-                        zip(self.cnn_layer_dims[:-1], self.cnn_layer_dims[1:])
-                    )
-                ]   
+                        )
+                        for i, (in_channel, out_channel) in enumerate(
+                            zip(self.cnn_layer_dims[:-1], self.cnn_layer_dims[1:])
+                        )
+                    ]   
+                )
             )
-        )
-        self.fc1 = nn.Linear(cnn_layer_dims[-1] * sum(self.output_num) * 3, mlp_layer_dims[0])
+        if self.image_repr == 'cellpose':
+            self.fc1 = nn.Linear(2 * sum(self.output_num) * 3, mlp_layer_dims[0])
+        elif self.image_repr == 'cnn_embedding':
+            self.fc1 = nn.Linear(cnn_layer_dims[-1] * sum(self.output_num) * 3, mlp_layer_dims[0])
         self.fc2 = nn.Linear(mlp_layer_dims[0], mlp_layer_dims[1])
 
     def get_conv2d_embedding(self, x: torch.Tensor):
